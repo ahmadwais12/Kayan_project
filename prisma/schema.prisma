@@ -1,0 +1,872 @@
+// Kayan Land Architecture & Construction — CMS schema
+// MySQL 8 / Prisma 6
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// Authentication & administration
+// ─────────────────────────────────────────────
+
+model AdminUser {
+  id           String    @id @default(uuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  avatarUrl    String?
+  isActive     Boolean   @default(true)
+  roleId       String
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  role            Role                 @relation(fields: [roleId], references: [id])
+  sessions        AdminSession[]
+  passwordResets  PasswordResetToken[]
+  auditLogs       AuditLog[]
+  notes           InquiryNote[]
+  assignedContact ContactInquiry[]     @relation("ContactAssignee")
+  assignedQuotes  QuoteRequest[]       @relation("QuoteAssignee")
+  media           Media[]
+  notifications   AdminNotification[]
+
+  @@index([roleId])
+  @@index([deletedAt])
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  name        String
+  slug        String   @unique
+  description String?  @db.Text
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  permissions RolePermission[]
+  users       AdminUser[]
+}
+
+model Permission {
+  id    String @id @default(uuid())
+  key   String @unique
+  label String
+  group String
+
+  roles RolePermission[]
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@index([permissionId])
+}
+
+model AdminSession {
+  id         String   @id @default(uuid())
+  tokenHash  String   @unique
+  userId     String
+  ip         String?
+  userAgent  String?  @db.Text
+  expiresAt  DateTime
+  lastSeenAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  user AdminUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  tokenHash String    @unique
+  userId    String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user AdminUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model AdminNotification {
+  id        String    @id @default(uuid())
+  userId    String
+  type      String    @default("system")
+  title     String
+  message   String    @db.Text
+  href      String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user AdminUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt])
+  @@index([createdAt])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  action    String
+  entity    String
+  entityId  String?
+  meta      Json?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  user AdminUser? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([entity])
+  @@index([createdAt])
+}
+
+// ─────────────────────────────────────────────
+// Company & website configuration
+// ─────────────────────────────────────────────
+
+model CompanySetting {
+  id    String @id @default(uuid())
+  key   String @unique
+  value String @db.Text
+  group String @default("general")
+}
+
+model SocialLink {
+  id        String  @id @default(uuid())
+  platform  String
+  url       String
+  label     String?
+  icon      String?
+  sortOrder Int     @default(0)
+  isActive  Boolean @default(true)
+}
+
+model NavigationItem {
+  id           String  @id @default(uuid())
+  label        String
+  url          String
+  location     String  @default("header")
+  parentId     String?
+  sortOrder    Int     @default(0)
+  isActive     Boolean @default(true)
+  openInNewTab Boolean @default(false)
+
+  parent   NavigationItem?  @relation("NavChildren", fields: [parentId], references: [id], onDelete: Cascade)
+  children NavigationItem[] @relation("NavChildren")
+
+  @@index([location, sortOrder])
+  @@index([parentId])
+}
+
+model FooterSetting {
+  id    String @id @default(uuid())
+  key   String @unique
+  value String @db.Text
+}
+
+model HomepageSection {
+  id             String   @id @default(uuid())
+  key            String   @unique
+  title          String?
+  subtitle       String?
+  description    String?  @db.Text
+  imageUrl       String?
+  buttonLabel    String?
+  buttonUrl      String?
+  secondaryLabel String?
+  secondaryUrl   String?
+  isEnabled      Boolean  @default(true)
+  sortOrder      Int      @default(0)
+  updatedAt      DateTime @updatedAt
+}
+
+model CompanyMilestone {
+  id          String  @id @default(uuid())
+  year        String
+  title       String
+  description String? @db.Text
+  imageUrl    String?
+  sortOrder   Int     @default(0)
+  isPublished Boolean @default(true)
+}
+
+model CompanyStatistic {
+  id        String  @id @default(uuid())
+  label     String
+  value     String
+  suffix    String?
+  icon      String?
+  sortOrder Int     @default(0)
+  isActive  Boolean @default(true)
+}
+
+model CoreValue {
+  id          String  @id @default(uuid())
+  title       String
+  description String  @db.Text
+  icon        String?
+  sortOrder   Int     @default(0)
+  isActive    Boolean @default(true)
+}
+
+model ProcessStep {
+  id          String  @id @default(uuid())
+  title       String
+  description String  @db.Text
+  imageUrl    String?
+  sortOrder   Int     @default(0)
+  isActive    Boolean @default(true)
+}
+
+model WhyChooseItem {
+  id          String  @id @default(uuid())
+  title       String
+  description String  @db.Text
+  icon        String?
+  sortOrder   Int     @default(0)
+  isActive    Boolean @default(true)
+}
+
+// ─────────────────────────────────────────────
+// Services
+// ─────────────────────────────────────────────
+
+model ServiceCategory {
+  id          String  @id @default(uuid())
+  name        String
+  slug        String  @unique
+  description String? @db.Text
+  imageUrl    String?
+  sortOrder   Int     @default(0)
+  isActive    Boolean @default(true)
+
+  services Service[]
+}
+
+model Service {
+  id               String    @id @default(uuid())
+  title            String
+  slug             String    @unique
+  shortDescription String    @db.Text
+  description      String    @db.LongText
+  mainImage        String?
+  icon             String?
+  categoryId       String?
+  isFeatured       Boolean   @default(false)
+  isPublished      Boolean   @default(false)
+  sortOrder        Int       @default(0)
+  seoTitle         String?
+  seoDescription   String?   @db.Text
+  ogImage          String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  deletedAt        DateTime?
+
+  category ServiceCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  images   ServiceImage[]
+  features ServiceFeature[]
+  faqs     ServiceFAQ[]
+
+  @@index([categoryId])
+  @@index([isPublished])
+}
+
+model ServiceImage {
+  id        String  @id @default(uuid())
+  serviceId String
+  url       String
+  alt       String?
+  sortOrder Int     @default(0)
+
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@index([serviceId])
+}
+
+model ServiceFeature {
+  id          String  @id @default(uuid())
+  serviceId   String
+  title       String
+  description String? @db.Text
+  sortOrder   Int     @default(0)
+
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@index([serviceId])
+}
+
+model ServiceFAQ {
+  id        String @id @default(uuid())
+  serviceId String
+  question  String
+  answer    String @db.Text
+  sortOrder Int    @default(0)
+
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@index([serviceId])
+}
+
+// ─────────────────────────────────────────────
+// Projects
+// ─────────────────────────────────────────────
+
+enum ProjectStatus {
+  PLANNING
+  IN_PROGRESS
+  COMPLETED
+  ON_HOLD
+}
+
+model ProjectCategory {
+  id          String  @id @default(uuid())
+  name        String
+  slug        String  @unique
+  description String? @db.Text
+  sortOrder   Int     @default(0)
+  isActive    Boolean @default(true)
+
+  projects Project[]
+}
+
+model Project {
+  id                   String        @id @default(uuid())
+  title                String
+  slug                 String        @unique
+  categoryId           String
+  clientName           String?
+  location             String
+  year                 String?
+  status               ProjectStatus @default(COMPLETED)
+  duration             String?
+  budget               String?
+  description          String        @db.LongText
+  challenges           String?       @db.LongText
+  solutions            String?       @db.LongText
+  architecturalDetails String?       @db.LongText
+  constructionDetails  String?       @db.LongText
+  coverImage           String?
+  beforeImage          String?
+  afterImage           String?
+  showBeforeAfter      Boolean       @default(false)
+  isFeatured           Boolean       @default(false)
+  isPublished          Boolean       @default(false)
+  sortOrder            Int           @default(0)
+  seoTitle             String?
+  seoDescription       String?       @db.Text
+  ogImage              String?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  deletedAt            DateTime?
+
+  category       ProjectCategory        @relation(fields: [categoryId], references: [id])
+  images         ProjectImage[]
+  videos         ProjectVideo[]
+  specifications ProjectSpecification[]
+  features       ProjectFeature[]
+  tags           ProjectTagRelation[]
+
+  @@index([categoryId])
+  @@index([isPublished, isFeatured])
+  @@index([deletedAt])
+}
+
+model ProjectImage {
+  id        String  @id @default(uuid())
+  projectId String
+  url       String
+  alt       String?
+  caption   String?
+  sortOrder Int     @default(0)
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+model ProjectVideo {
+  id        String  @id @default(uuid())
+  projectId String
+  url       String
+  title     String?
+  type      String  @default("YOUTUBE")
+  sortOrder Int     @default(0)
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+model ProjectSpecification {
+  id        String @id @default(uuid())
+  projectId String
+  label     String
+  value     String
+  sortOrder Int    @default(0)
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+model ProjectFeature {
+  id          String  @id @default(uuid())
+  projectId   String
+  title       String
+  description String? @db.Text
+  sortOrder   Int     @default(0)
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+model ProjectTag {
+  id   String @id @default(uuid())
+  name String @unique
+  slug String @unique
+
+  projects ProjectTagRelation[]
+}
+
+model ProjectTagRelation {
+  projectId String
+  tagId     String
+
+  project Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tag     ProjectTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, tagId])
+  @@index([tagId])
+}
+
+// ─────────────────────────────────────────────
+// Team
+// ─────────────────────────────────────────────
+
+model Department {
+  id          String  @id @default(uuid())
+  name        String
+  slug        String  @unique
+  description String? @db.Text
+  sortOrder   Int     @default(0)
+  isActive    Boolean @default(true)
+
+  members TeamMember[]
+}
+
+model TeamMember {
+  id           String    @id @default(uuid())
+  name         String
+  slug         String    @unique
+  imageUrl     String?
+  jobTitle     String
+  departmentId String?
+  bio          String?   @db.LongText
+  skills       String?   @db.Text
+  education    String?   @db.Text
+  experience   String?   @db.Text
+  email        String?
+  linkedinUrl  String?
+  instagramUrl String?
+  facebookUrl  String?
+  websiteUrl   String?
+  sortOrder    Int       @default(0)
+  isPublished  Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  department Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+
+  @@index([departmentId])
+  @@index([isPublished])
+}
+
+// ─────────────────────────────────────────────
+// Gallery
+// ─────────────────────────────────────────────
+
+model GalleryCategory {
+  id        String  @id @default(uuid())
+  name      String
+  slug      String  @unique
+  sortOrder Int     @default(0)
+  isActive  Boolean @default(true)
+
+  media GalleryMedia[]
+}
+
+model GalleryMedia {
+  id           String   @id @default(uuid())
+  categoryId   String?
+  title        String?
+  caption      String?  @db.Text
+  url          String
+  type         String   @default("IMAGE")
+  thumbnailUrl String?
+  width        Int?
+  height       Int?
+  sortOrder    Int      @default(0)
+  isPublished  Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  category GalleryCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@index([categoryId])
+}
+
+// ─────────────────────────────────────────────
+// Blog
+// ─────────────────────────────────────────────
+
+enum BlogStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+}
+
+model BlogAuthor {
+  id        String  @id @default(uuid())
+  name      String
+  slug      String  @unique
+  bio       String? @db.Text
+  avatarUrl String?
+  isActive  Boolean @default(true)
+
+  posts BlogPost[]
+}
+
+model BlogCategory {
+  id          String  @id @default(uuid())
+  name        String
+  slug        String  @unique
+  description String? @db.Text
+  sortOrder   Int     @default(0)
+  isActive    Boolean @default(true)
+
+  posts BlogPost[]
+}
+
+model BlogTag {
+  id   String @id @default(uuid())
+  name String @unique
+  slug String @unique
+
+  posts BlogPostTag[]
+}
+
+model BlogPost {
+  id             String     @id @default(uuid())
+  title          String
+  slug           String     @unique
+  excerpt        String     @db.Text
+  content        String     @db.LongText
+  featuredImage  String?
+  authorId       String?
+  categoryId     String?
+  status         BlogStatus @default(DRAFT)
+  publishedAt    DateTime?
+  readingTime    Int        @default(5)
+  isFeatured     Boolean    @default(false)
+  seoTitle       String?
+  seoDescription String?    @db.Text
+  ogImage        String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  deletedAt      DateTime?
+
+  author   BlogAuthor?   @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  category BlogCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  tags     BlogPostTag[]
+
+  @@index([status, publishedAt])
+  @@index([categoryId])
+  @@index([deletedAt])
+}
+
+model BlogPostTag {
+  postId String
+  tagId  String
+
+  post BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag  BlogTag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, tagId])
+  @@index([tagId])
+}
+
+// ─────────────────────────────────────────────
+// Customer communication
+// ─────────────────────────────────────────────
+
+enum InquiryStatus {
+  NEW
+  CONTACTED
+  IN_PROGRESS
+  QUOTATION_SENT
+  APPROVED
+  REJECTED
+  COMPLETED
+}
+
+model ContactInquiry {
+  id           String        @id @default(uuid())
+  name         String
+  email        String
+  phone        String?
+  subject      String
+  message      String        @db.LongText
+  status       InquiryStatus @default(NEW)
+  assignedToId String?
+  followUpAt   DateTime?
+  ip           String?
+  userAgent    String?       @db.Text
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  assignedTo  AdminUser?          @relation("ContactAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  notes       InquiryNote[]
+  attachments InquiryAttachment[]
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([assignedToId])
+}
+
+model QuoteRequest {
+  id           String        @id @default(uuid())
+  name         String
+  email        String
+  phone        String
+  projectType  String
+  location     String
+  budget       String?
+  startDate    DateTime?
+  description  String        @db.LongText
+  status       InquiryStatus @default(NEW)
+  assignedToId String?
+  followUpAt   DateTime?
+  ip           String?
+  userAgent    String?       @db.Text
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  assignedTo  AdminUser?          @relation("QuoteAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  notes       InquiryNote[]
+  attachments InquiryAttachment[]
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([assignedToId])
+}
+
+model InquiryAttachment {
+  id               String   @id @default(uuid())
+  contactInquiryId String?
+  quoteRequestId   String?
+  fileName         String
+  filePath         String
+  mimeType         String
+  size             Int
+  createdAt        DateTime @default(now())
+
+  contactInquiry ContactInquiry? @relation(fields: [contactInquiryId], references: [id], onDelete: Cascade)
+  quoteRequest   QuoteRequest?   @relation(fields: [quoteRequestId], references: [id], onDelete: Cascade)
+
+  @@index([contactInquiryId])
+  @@index([quoteRequestId])
+}
+
+model InquiryNote {
+  id               String   @id @default(uuid())
+  contactInquiryId String?
+  quoteRequestId   String?
+  authorId         String?
+  body             String   @db.LongText
+  createdAt        DateTime @default(now())
+
+  contactInquiry ContactInquiry? @relation(fields: [contactInquiryId], references: [id], onDelete: Cascade)
+  quoteRequest   QuoteRequest?   @relation(fields: [quoteRequestId], references: [id], onDelete: Cascade)
+  author         AdminUser?      @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([contactInquiryId])
+  @@index([quoteRequestId])
+}
+
+model NewsletterSubscriber {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  isActive  Boolean  @default(true)
+  source    String?  @default("footer")
+  createdAt DateTime @default(now())
+}
+
+model Testimonial {
+  id            String   @id @default(uuid())
+  clientName    String
+  clientTitle   String?
+  clientCompany String?
+  photoUrl      String?
+  content       String   @db.Text
+  rating        Int      @default(5)
+  isPublished   Boolean  @default(false)
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+}
+
+// ─────────────────────────────────────────────
+// Website utilities
+// ─────────────────────────────────────────────
+
+model FaqCategory {
+  id        String  @id @default(uuid())
+  name      String
+  slug      String  @unique
+  sortOrder Int     @default(0)
+  isActive  Boolean @default(true)
+
+  faqs FAQ[]
+}
+
+model FAQ {
+  id            String   @id @default(uuid())
+  categoryId    String?
+  question      String   @db.Text
+  answer        String   @db.LongText
+  sortOrder     Int      @default(0)
+  isActive      Boolean  @default(true)
+  showOnService Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  category FaqCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@index([categoryId])
+}
+
+model MediaFolder {
+  id       String  @id @default(uuid())
+  name     String
+  slug     String  @unique
+  parentId String?
+
+  parent   MediaFolder?  @relation("FolderTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children MediaFolder[] @relation("FolderTree")
+  media    Media[]
+}
+
+model Media {
+  id           String   @id @default(uuid())
+  fileName     String
+  url          String
+  thumbnailUrl String?
+  mimeType     String
+  size         Int
+  width        Int?
+  height       Int?
+  alt          String?
+  caption      String?
+  folderId     String?
+  uploadedById String?
+  createdAt    DateTime @default(now())
+
+  folder     MediaFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  uploadedBy AdminUser?   @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@index([folderId])
+  @@index([createdAt])
+}
+
+model SEOSetting {
+  id                 String   @id @default("global")
+  siteTitle          String
+  defaultDescription String   @db.Text
+  ogImage            String?
+  canonicalBase      String?
+  robotsPolicy       String   @default("index, follow")
+  googleVerification String?
+  bingVerification   String?
+  updatedAt          DateTime @updatedAt
+}
+
+model Redirect {
+  id         String   @id @default(uuid())
+  fromPath   String   @unique
+  toPath     String
+  statusCode Int      @default(301)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+}
+
+model PageView {
+  id        String   @id @default(uuid())
+  path      String
+  visitorId String
+  sessionId String?
+  title     String?
+  pageType  String?
+  userId    String?
+  userName  String?
+  ipHash    String?
+  referrer  String?  @db.Text
+  device    String?
+  country   String?
+  createdAt DateTime @default(now())
+
+  @@index([path, createdAt])
+  @@index([visitorId])
+  @@index([sessionId])
+  @@index([createdAt])
+}
+
+model CardEvent {
+  id          String   @id @default(uuid())
+  eventType   String
+  entityType  String
+  entityId    String
+  entityTitle String
+  path        String
+  visitorId   String
+  sessionId   String?
+  userId      String?
+  userName    String?
+  ipHash      String?
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([entityType, entityId])
+  @@index([eventType, createdAt])
+  @@index([visitorId])
+  @@index([sessionId])
+}
+
+model Translation {
+  id        String   @id @default(uuid())
+  locale    String
+  entity    String
+  entityId  String
+  field     String
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt
+
+  @@unique([locale, entity, entityId, field])
+  @@index([entity, entityId])
+}

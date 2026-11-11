@@ -1,0 +1,27 @@
+import { prisma } from "@/lib/prisma";
+
+type AuditInput = {
+  userId?: string | null;
+  action: string;
+  entity: string;
+  entityId?: string | null;
+  meta?: Record<string, unknown>;
+  ip?: string | null;
+};
+
+export async function logAudit(input: AuditInput) {
+  try {
+    await prisma.auditLog.create({
+      data: {
+        userId: input.userId || null,
+        action: input.action,
+        entity: input.entity,
+        entityId: input.entityId || null,
+        meta: input.meta as never,
+        ip: input.ip || null,
+      },
+    });
+  } catch (error) {
+    console.error("Audit log failed", error);
+  }
+}
