@@ -3,7 +3,7 @@ import { Clock, Mail, MapPin, MessageCircle, Phone } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { buildMetadata } from "@/lib/seo";
 import { getLocale } from "@/lib/i18n/server";
-import { getLocalizedSettings } from "@/lib/i18n/content";
+import { getLocalizedSettings, withTranslations } from "@/lib/i18n/content";
 import { getDictionary } from "@/lib/i18n/dictionary";
 import { PageHero } from "@/components/public/page-hero";
 import { SocialIcon } from "@/components/public/social-icon";
@@ -14,9 +14,13 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata() {
   const locale = await getLocale();
   const t = getDictionary(locale);
+  const section = await prisma.homepageSection.findUnique({ where: { key: "contact" } });
+  const [localized] = section
+    ? await withTranslations("homepage", [section], locale, ["title", "subtitle", "description"])
+    : [];
   return buildMetadata({
-    title: t.contactLabel,
-    description: t.contactHeroDesc,
+    title: localized?.title || t.contactStudio,
+    description: localized?.description || t.contactHeroDesc,
     path: "/contact",
   });
 }
@@ -25,10 +29,16 @@ export default async function ContactPage() {
   const locale = await getLocale();
   const t = getDictionary(locale);
 
-  const [settings, socials] = await Promise.all([
+  const [settings, socials, introRaw] = await Promise.all([
     getLocalizedSettings(),
     prisma.socialLink.findMany({ where: { isActive: true }, orderBy: { sortOrder: "asc" } }),
+    prisma.homepageSection.findUnique({ where: { key: "contact" } }),
   ]);
+
+  const introRows = introRaw
+    ? await withTranslations("homepage", [introRaw], locale, ["title", "subtitle", "description"])
+    : [];
+  const intro = introRows[0] || null;
 
   const details = [
     settings.address && { icon: MapPin, label: t.studioLabel, value: settings.address, href: undefined },
@@ -54,10 +64,10 @@ export default async function ContactPage() {
   return (
     <>
       <PageHero
-        eyebrow={t.getInTouch}
-        title={t.contactStudio}
-        description={t.contactHeroDesc}
-        breadcrumb={[{ label: t.contactLabel }]}
+        eyebrow={intro?.subtitle || t.getInTouch}
+        title={intro?.title || t.contactStudio}
+        description={intro?.description || t.contactHeroDesc}
+        breadcrumb={[{ label: intro?.title || t.contactLabel }]}
         homeLabel={t.home}
         compact
       />

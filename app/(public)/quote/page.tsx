@@ -13,9 +13,13 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata() {
   const locale = await getLocale();
   const t = getDictionary(locale);
+  const section = await prisma.homepageSection.findUnique({ where: { key: "quote" } });
+  const [localized] = section
+    ? await withTranslations("homepage", [section], locale, ["title", "subtitle", "description"])
+    : [];
   return buildMetadata({
-    title: t.requestQuote,
-    description: t.quoteHeroDesc,
+    title: localized?.title || t.requestQuote,
+    description: localized?.description || t.quoteHeroDesc,
     path: "/quote",
   });
 }
@@ -26,26 +30,33 @@ export default async function QuotePage() {
   const expected = [t.expectedStep1, t.expectedStep2, t.expectedStep3];
   const inclusions = [t.include1, t.include2, t.include3, t.include4];
 
-  const [settings, servicesRaw] = await Promise.all([
+  const [settings, servicesRaw, introRaw] = await Promise.all([
     getLocalizedSettings(),
     prisma.service.findMany({
       where: { isPublished: true, deletedAt: null },
       orderBy: [{ isFeatured: "desc" }, { sortOrder: "asc" }],
       select: { id: true, title: true },
     }),
+    prisma.homepageSection.findUnique({ where: { key: "quote" } }),
   ]);
 
-  const services = await withTranslations("service", servicesRaw, locale, ["title"]);
+  const [services, introRows] = await Promise.all([
+    withTranslations("service", servicesRaw, locale, ["title"]),
+    introRaw
+      ? withTranslations("homepage", [introRaw], locale, ["title", "subtitle", "description"])
+      : Promise.resolve([]),
+  ]);
+  const intro = introRows[0] || null;
 
   const projectTypes = [...new Set(services.map((service) => service.title))].slice(0, 10);
 
   return (
     <>
       <PageHero
-        eyebrow={t.startProject}
-        title={t.requestQuote}
-        description={t.quoteHeroDesc}
-        breadcrumb={[{ label: t.requestQuote }]}
+        eyebrow={intro?.subtitle || t.startProject}
+        title={intro?.title || t.requestQuote}
+        description={intro?.description || t.quoteHeroDesc}
+        breadcrumb={[{ label: intro?.title || t.requestQuote }]}
         homeLabel={t.home}
         compact
       />

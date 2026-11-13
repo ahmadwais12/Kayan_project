@@ -16,9 +16,13 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata() {
   const locale = await getLocale();
   const t = getDictionary(locale);
+  const section = await prisma.homepageSection.findUnique({ where: { key: "gallery" } });
+  const [localized] = section
+    ? await withTranslations("homepage", [section], locale, ["title", "subtitle", "description"])
+    : [];
   return buildMetadata({
-    title: t.galleryLabel,
-    description: t.galleryHeroDesc,
+    title: localized?.title || t.galleryLabel,
+    description: localized?.description || t.galleryHeroDesc,
     path: "/gallery",
   });
 }
@@ -33,7 +37,7 @@ export default async function GalleryPage({
   const t = getDictionary(locale);
   const category = (query.category || "").trim();
 
-  const [categories, media, ctaRaw] = await Promise.all([
+  const [categories, media, ctaRaw, introRaw] = await Promise.all([
     prisma.galleryCategory.findMany({
       where: { isActive: true },
       orderBy: { sortOrder: "asc" },
@@ -50,16 +54,21 @@ export default async function GalleryPage({
       include: { category: true },
     }),
     prisma.homepageSection.findUnique({ where: { key: "cta" } }),
+    prisma.homepageSection.findUnique({ where: { key: "gallery" } }),
   ]);
 
-  const [ctaRows, localizedCategories, localizedMedia] = await Promise.all([
+  const [ctaRows, introRows, localizedCategories, localizedMedia] = await Promise.all([
     ctaRaw
       ? withTranslations("homepage", [ctaRaw], locale, ["title", "subtitle", "description", "buttonLabel", "secondaryLabel"])
+      : Promise.resolve([]),
+    introRaw
+      ? withTranslations("homepage", [introRaw], locale, ["title", "subtitle", "description"])
       : Promise.resolve([]),
     withTranslations("galleryCategory", categories, locale, ["name"]),
     withTranslations("galleryMedia", media, locale, ["title", "caption"]),
   ]);
   const cta = ctaRows[0] || null;
+  const intro = introRows[0] || null;
 
   const visibleCategories = localizedCategories.filter((item) => item._count.media > 0);
   const images = localizedMedia
@@ -75,10 +84,10 @@ export default async function GalleryPage({
   return (
     <>
       <PageHero
-        eyebrow={t.visualRecord}
-        title={t.galleryLabel}
-        description={t.galleryHeroDesc}
-        breadcrumb={[{ label: t.galleryLabel }]}
+        eyebrow={intro?.subtitle || t.visualRecord}
+        title={intro?.title || t.galleryLabel}
+        description={intro?.description || t.galleryHeroDesc}
+        breadcrumb={[{ label: intro?.title || t.galleryLabel }]}
         homeLabel={t.home}
         compact
       />

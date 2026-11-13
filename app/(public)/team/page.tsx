@@ -15,9 +15,13 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata() {
   const locale = await getLocale();
   const t = getDictionary(locale);
+  const section = await prisma.homepageSection.findUnique({ where: { key: "team" } });
+  const [localized] = section
+    ? await withTranslations("homepage", [section], locale, ["title", "subtitle", "description"])
+    : [];
   return buildMetadata({
-    title: t.teamLabel,
-    description: t.teamHeroDesc,
+    title: localized?.title || t.teamLabel,
+    description: localized?.description || t.teamHeroDesc,
     path: "/team",
   });
 }
@@ -32,7 +36,7 @@ export default async function TeamPage({
   const t = getDictionary(locale);
   const department = (query.department || "").trim();
 
-  const [departments, members, ctaRaw] = await Promise.all([
+  const [departments, members, ctaRaw, introRaw] = await Promise.all([
     prisma.department.findMany({
       where: { isActive: true },
       orderBy: { sortOrder: "asc" },
@@ -50,16 +54,21 @@ export default async function TeamPage({
       include: { department: true },
     }),
     prisma.homepageSection.findUnique({ where: { key: "cta" } }),
+    prisma.homepageSection.findUnique({ where: { key: "team" } }),
   ]);
 
-  const [ctaRows, localizedDepartments, localizedMembers] = await Promise.all([
+  const [ctaRows, introRows, localizedDepartments, localizedMembers] = await Promise.all([
     ctaRaw
       ? withTranslations("homepage", [ctaRaw], locale, ["title", "subtitle", "description", "buttonLabel", "secondaryLabel"])
+      : Promise.resolve([]),
+    introRaw
+      ? withTranslations("homepage", [introRaw], locale, ["title", "subtitle", "description"])
       : Promise.resolve([]),
     withTranslations("department", departments, locale, ["name", "description"]),
     withTranslations("teamMember", members, locale, ["jobTitle", "bio", "skills", "education", "experience"]),
   ]);
   const cta = ctaRows[0] || null;
+  const intro = introRows[0] || null;
   const departmentNames = new Map(localizedDepartments.map((item) => [item.id, item.name]));
   const memberView = localizedMembers.map((member) =>
     member.department
@@ -75,10 +84,10 @@ export default async function TeamPage({
   return (
     <>
       <PageHero
-        eyebrow={t.peopleEyebrow}
-        title={t.teamLabel}
-        description={t.teamHeroDesc}
-        breadcrumb={[{ label: t.teamLabel }]}
+        eyebrow={intro?.subtitle || t.peopleEyebrow}
+        title={intro?.title || t.teamLabel}
+        description={intro?.description || t.teamHeroDesc}
+        breadcrumb={[{ label: intro?.title || t.teamLabel }]}
         homeLabel={t.home}
         compact
       />

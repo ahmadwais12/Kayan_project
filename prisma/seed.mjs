@@ -201,6 +201,43 @@ const HOMEPAGE_SECTIONS = [
     sortOrder: 10,
   },
   {
+    key: "faq",
+    title: "Frequently asked questions",
+    subtitle: "Help",
+    description: "Common questions about the studio, the process, and working together.",
+    sortOrder: 11,
+  },
+  {
+    key: "team",
+    title: "Team",
+    subtitle: "The people",
+    description: "The profiles published by the studio, organised by department.",
+    sortOrder: 12,
+  },
+  {
+    key: "gallery",
+    title: "Gallery",
+    subtitle: "Visual record",
+    description: "Spaces, materials, and details recorded by the studio.",
+    sortOrder: 13,
+  },
+  {
+    key: "contact",
+    title: "Contact the studio",
+    subtitle: "Get in touch",
+    description:
+      "Tell us about your site, your project, or the question you have. We will respond using the details you provide.",
+    sortOrder: 14,
+  },
+  {
+    key: "quote",
+    title: "Request a quote",
+    subtitle: "Start a project",
+    description:
+      "Tell us about the site, the spaces you need, and how you want them to work. The more detail you share, the more useful our response can be.",
+    sortOrder: 15,
+  },
+  {
     key: "privacy",
     title: "Privacy Policy",
     subtitle: "How this website handles information",
@@ -587,11 +624,17 @@ async function seedSettings() {
   }
 
   for (const section of HOMEPAGE_SECTIONS) {
-    await prisma.homepageSection.upsert({
-      where: { key: section.key },
-      update: {},
-      create: section,
-    });
+    const existing = await prisma.homepageSection.findUnique({ where: { key: section.key } });
+    if (!existing) {
+      await prisma.homepageSection.create({ data: section });
+      continue;
+    }
+    const missing = Object.fromEntries(
+      Object.entries(section).filter(([field]) => existing[field] === null || existing[field] === undefined),
+    );
+    if (Object.keys(missing).length > 0) {
+      await prisma.homepageSection.update({ where: { key: section.key }, data: missing });
+    }
   }
 
   if ((await prisma.whyChooseItem.count()) === 0) {

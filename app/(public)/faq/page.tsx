@@ -17,9 +17,13 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata() {
   const locale = await getLocale();
   const t = getDictionary(locale);
+  const section = await prisma.homepageSection.findUnique({ where: { key: "faq" } });
+  const [localized] = section
+    ? await withTranslations("homepage", [section], locale, ["title", "subtitle", "description"])
+    : [];
   return buildMetadata({
-    title: t.faqTitleLong,
-    description: t.faqHeroDesc,
+    title: localized?.title || t.faqTitleLong,
+    description: localized?.description || t.faqHeroDesc,
     path: "/faq",
   });
 }
@@ -35,7 +39,7 @@ export default async function FaqPage({
   const q = (query.q || "").trim();
   const categoryFilter = (query.category || "").trim();
 
-  const [categories, faqs, ctaRaw] = await Promise.all([
+  const [categories, faqs, ctaRaw, introRaw] = await Promise.all([
     prisma.faqCategory.findMany({
       where: { isActive: true },
       orderBy: { sortOrder: "asc" },
@@ -60,16 +64,21 @@ export default async function FaqPage({
       include: { category: true },
     }),
     prisma.homepageSection.findUnique({ where: { key: "cta" } }),
+    prisma.homepageSection.findUnique({ where: { key: "faq" } }),
   ]);
 
-  const [ctaRows, localizedCategories, localizedFaqs] = await Promise.all([
+  const [ctaRows, localizedCategories, localizedFaqs, introRows] = await Promise.all([
     ctaRaw
       ? withTranslations("homepage", [ctaRaw], locale, ["title", "subtitle", "description", "buttonLabel", "secondaryLabel"])
       : Promise.resolve([]),
     withTranslations("faqCategory", categories, locale, ["name"]),
     withTranslations("faq", faqs, locale, ["question", "answer"]),
+    introRaw
+      ? withTranslations("homepage", [introRaw], locale, ["title", "subtitle", "description"])
+      : Promise.resolve([]),
   ]);
   const cta = ctaRows[0] || null;
+  const intro = introRows[0] || null;
   const categoryNames = new Map(localizedCategories.map((category) => [category.id, category.name]));
 
   const visibleCategories = localizedCategories.filter((category) => category._count.faqs > 0);
@@ -102,10 +111,10 @@ export default async function FaqPage({
       )}
 
       <PageHero
-        eyebrow={t.help}
-        title={t.faqTitleLong}
-        description={t.faqHeroDesc}
-        breadcrumb={[{ label: t.faq }]}
+        eyebrow={intro?.subtitle || t.help}
+        title={intro?.title || t.faqTitleLong}
+        description={intro?.description || t.faqHeroDesc}
+        breadcrumb={[{ label: intro?.title || t.faq }]}
         homeLabel={t.home}
         compact
       />
