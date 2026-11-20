@@ -6,18 +6,22 @@ import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/auth/guards";
 import { PageHeader } from "@/components/admin/page-header";
 import { AdminFlash, flashFromQuery } from "@/components/admin/flash";
-import { Pagination } from "@/components/admin/pagination";
+import { TableFooter } from "@/components/admin/pagination";
 import { DeleteButton } from "@/components/admin/delete-button";
+import { ViewButton } from "@/components/admin/view-button";
+import { FiltersPopover } from "@/components/admin/filters-popover";
+import { FiltersForm } from "@/components/admin/filters-form";
 import { PublishBadge } from "@/components/admin/status-badge";
 import { deleteTeamMember } from "@/actions/team";
 import { Button } from "@/components/ui/button";
 import { Input, NativeSelect } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { parseRows } from "@/lib/pagination";
 
 export const dynamic = "force-dynamic";
 
-const PAGE_SIZE = 12;
+const DEFAULT_ROWS = 10;
 
 export default async function TeamPage({
   searchParams,
@@ -27,8 +31,10 @@ export default async function TeamPage({
   await requirePermission("team.manage");
   const query = await searchParams;
   const page = Math.max(1, Number(query.page) || 1);
+  const rows = parseRows(query.rows, DEFAULT_ROWS);
   const q = (query.q || "").trim();
   const department = query.department || "";
+  const activeFilterCount = [q, department].filter(Boolean).length;
 
   const where: Prisma.TeamMemberWhereInput = {
     deletedAt: null,
@@ -40,8 +46,8 @@ export default async function TeamPage({
     prisma.teamMember.findMany({
       where,
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip: (page - 1) * rows,
+      take: rows,
       include: { department: { select: { name: true } } },
     }),
     prisma.teamMember.count({ where }),
@@ -59,6 +65,22 @@ export default async function TeamPage({
             <Button asChild variant="outline">
               <Link href="/admin/team/departments">Departments</Link>
             </Button>
+            <FiltersPopover activeCount={activeFilterCount}>
+              <FiltersForm resetHref="/admin/team">
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input name="q" defaultValue={q} placeholder="Search name or role" className="pl-9" />
+                </div>
+                <NativeSelect name="department" defaultValue={department} aria-label="Department">
+                  <option value="">All departments</option>
+                  {departments.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}
+                    </option>
+                  ))}
+                </NativeSelect>
+              </FiltersForm>
+            </FiltersPopover>
             <Button asChild>
               <Link href="/admin/team/new">
                 <Plus className="size-4" /> New member
@@ -71,22 +93,6 @@ export default async function TeamPage({
       <AdminFlash {...flashFromQuery(query)} />
 
       <Card className="overflow-hidden">
-        <form method="get" className="grid gap-3 border-b border-border/70 p-4 sm:grid-cols-[1fr_auto_auto]">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input name="q" defaultValue={q} placeholder="Search name or role" className="pl-9" />
-          </div>
-          <NativeSelect name="department" defaultValue={department} className="sm:w-52">
-            <option value="">All departments</option>
-            {departments.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name}
-              </option>
-            ))}
-          </NativeSelect>
-          <Button type="submit" variant="secondary">Filter</Button>
-        </form>
-
         {members.length === 0 ? (
           <div className="flex flex-col items-center gap-3 px-6 py-16 text-center">
             <span className="flex size-12 items-center justify-center rounded-full bg-secondary text-primary">
@@ -136,13 +142,7 @@ export default async function TeamPage({
                   <TableCell><PublishBadge published={member.isPublished} /></TableCell>
                   <TableCell>
                     <div className="flex items-center justify-end gap-1">
-                      {member.isPublished && (
-                        <Button asChild variant="ghost" size="sm">
-                          <Link href={`/team/${member.slug}`} target="_blank" rel="noreferrer">
-                            View
-                          </Link>
-                        </Button>
-                      )}
+                      <ViewButton href={`/admin/records/team/${member.id}`} name={member.name} />
                       <Button asChild variant="ghost" size="sm">
                         <Link href={`/admin/team/${member.id}`}>Edit</Link>
                       </Button>
@@ -160,9 +160,15 @@ export default async function TeamPage({
           </Table>
         )}
 
-        <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} basePath="/admin/team" params={{ q, department }} />
+        <TableFooter
+          page={page}
+          pageSize={rows}
+          total={total}
+          basePath="/admin/team"
+          params={{ q, department }}
+          noun={total === 1 ? "team member" : "team members"}
+        />
       </Card>
-      <p className="mt-3 text-xs text-muted-foreground">{total} team member{total === 1 ? "" : "s"} in this view.</p>
     </div>
   );
 }

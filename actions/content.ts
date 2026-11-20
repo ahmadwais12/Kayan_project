@@ -7,6 +7,8 @@ import { prisma } from "@/lib/prisma";
 import { authorize } from "@/lib/auth/guards";
 import { checked, field, numberField, redirectWith } from "@/lib/form-helpers";
 import { logAudit } from "@/lib/audit";
+import { saveFormTranslations } from "@/lib/i18n/form-translations";
+import { youtubeId } from "@/lib/video";
 
 type Gate = NonNullable<Awaited<ReturnType<typeof authorize>>["session"]>;
 
@@ -37,8 +39,10 @@ const testimonialInput = z.object({
 });
 
 export async function saveTestimonial(formData: FormData) {
+  const requestedReturnTo = field(formData, "returnTo");
+  const formPath = requestedReturnTo.startsWith(`${TESTIMONIALS}/`) ? requestedReturnTo : TESTIMONIALS;
   const gate = await gateFor("content.manage");
-  if (gate.error || !gate.session) failure(TESTIMONIALS, gate.error);
+  if (gate.error || !gate.session) failure(formPath, gate.error);
 
   const id = field(formData, "id");
   const parsed = testimonialInput.safeParse({
@@ -51,7 +55,7 @@ export async function saveTestimonial(formData: FormData) {
     isPublished: checked(formData, "isPublished"),
     sortOrder: numberField(formData, "sortOrder"),
   });
-  if (!parsed.success) failure(TESTIMONIALS, parsed.error.issues[0]?.message);
+  if (!parsed.success) failure(formPath, parsed.error.issues[0]?.message);
 
   const data = {
     ...parsed.data,
@@ -63,6 +67,7 @@ export async function saveTestimonial(formData: FormData) {
   const saved = id
     ? await prisma.testimonial.update({ where: { id }, data })
     : await prisma.testimonial.create({ data });
+  await saveFormTranslations("testimonial", saved.id, formData, ["content", "clientTitle", "clientCompany"]);
 
   await logAudit({
     userId: gate.session.user.id,
@@ -99,6 +104,173 @@ export async function deleteTestimonial(formData: FormData) {
   redirect(`${TESTIMONIALS}?deleted=1`);
 }
 
+/* ------------------------------------- Awards ------------------------------------ */
+
+const AWARDS = "/admin/awards";
+
+const awardInput = z.object({
+  title: z.string().trim().min(2, "Award title is required").max(200),
+  issuer: text(200),
+  description: text(3000),
+  imageUrl: text(500),
+  sortOrder: z.number().int().min(0).max(9999),
+  isPublished: z.boolean(),
+});
+
+export async function saveAward(formData: FormData) {
+  const requestedReturnTo = field(formData, "returnTo");
+  const formPath = requestedReturnTo.startsWith(`${AWARDS}/`) ? requestedReturnTo : AWARDS;
+  const gate = await gateFor("content.manage");
+  if (gate.error || !gate.session) failure(formPath, gate.error);
+
+  const id = field(formData, "id");
+  const year = numberField(formData, "year", 0);
+  if (year !== 0 && (year < 1900 || year > 2100)) failure(formPath, "Enter a year between 1900 and 2100");
+
+  const parsed = awardInput.safeParse({
+    title: field(formData, "title"),
+    issuer: field(formData, "issuer"),
+    description: field(formData, "description"),
+    imageUrl: field(formData, "imageUrl"),
+    sortOrder: numberField(formData, "sortOrder"),
+    isPublished: checked(formData, "isPublished"),
+  });
+  if (!parsed.success) failure(formPath, parsed.error.issues[0]?.message);
+
+  const data = {
+    ...parsed.data,
+    issuer: parsed.data.issuer || null,
+    description: parsed.data.description || null,
+    imageUrl: parsed.data.imageUrl || null,
+    year: year || null,
+  };
+
+  const saved = id
+    ? await prisma.award.update({ where: { id }, data })
+    : await prisma.award.create({ data });
+  await saveFormTranslations("award", saved.id, formData, ["title", "issuer", "description"]);
+
+  await logAudit({
+    userId: gate.session.user.id,
+    action: id ? "award.update" : "award.create",
+    entity: "Award",
+    entityId: saved.id,
+    meta: { title: saved.title },
+  });
+
+  revalidatePath("/");
+  revalidatePath(AWARDS);
+  redirect(`${formPath}?saved=1`);
+}
+
+export async function deleteAward(formData: FormData) {
+  const gate = await gateFor("content.manage");
+  if (gate.error || !gate.session) failure(AWARDS, gate.error);
+
+  const id = field(formData, "id");
+  const item = await prisma.award.findUnique({ where: { id } });
+  if (!item) redirect(redirectWith(AWARDS, "error", "Award not found"));
+
+  await prisma.award.delete({ where: { id } });
+  await logAudit({
+    userId: gate.session.user.id,
+    action: "award.delete",
+    entity: "Award",
+    entityId: id,
+    meta: { title: item.title },
+  });
+  revalidatePath("/");
+  revalidatePath(AWARDS);
+  redirect(`${AWARDS}?deleted=1`);
+}
+
+/* -------------------------------- Project videos -------------------------------- */
+
+const VIDEOS = "/admin/videos";
+
+const videoInput = z.object({
+  title: z.string().trim().min(2, "Video title is required").max(200),
+  description: text(1000),
+  youtubeUrl: text(500),
+  videoUrl: text(500),
+  thumbnailUrl: text(500),
+  sortOrder: z.number().int().min(0).max(9999),
+  isPublished: z.boolean(),
+});
+
+export async function saveShowcaseVideo(formData: FormData) {
+  const requestedReturnTo = field(formData, "returnTo");
+  const formPath = requestedReturnTo.startsWith(`${VIDEOS}/`) ? requestedReturnTo : VIDEOS;
+  const gate = await gateFor("content.manage");
+  if (gate.error || !gate.session) failure(formPath, gate.error);
+
+  const id = field(formData, "id");
+  const parsed = videoInput.safeParse({
+    title: field(formData, "title"),
+    description: field(formData, "description"),
+    youtubeUrl: field(formData, "youtubeUrl"),
+    videoUrl: field(formData, "videoUrl"),
+    thumbnailUrl: field(formData, "thumbnailUrl"),
+    sortOrder: numberField(formData, "sortOrder"),
+    isPublished: checked(formData, "isPublished"),
+  });
+  if (!parsed.success) failure(formPath, parsed.error.issues[0]?.message);
+
+  const youtube = parsed.data.youtubeUrl ? youtubeId(parsed.data.youtubeUrl) : null;
+  if (parsed.data.youtubeUrl && !youtube) {
+    failure(formPath, "Enter a valid YouTube link, for example https://youtu.be/VIDEO_ID");
+  }
+  if (!youtube && !parsed.data.videoUrl) {
+    failure(formPath, "Add a YouTube link or upload a video file.");
+  }
+
+  const data = {
+    ...parsed.data,
+    youtubeUrl: youtube ? parsed.data.youtubeUrl : null,
+    description: parsed.data.description || null,
+    videoUrl: parsed.data.videoUrl || null,
+    thumbnailUrl: parsed.data.thumbnailUrl || null,
+  };
+
+  const saved = id
+    ? await prisma.showcaseVideo.update({ where: { id }, data })
+    : await prisma.showcaseVideo.create({ data });
+  await saveFormTranslations("showcaseVideo", saved.id, formData, ["title", "description"]);
+
+  await logAudit({
+    userId: gate.session.user.id,
+    action: id ? "showcaseVideo.update" : "showcaseVideo.create",
+    entity: "ShowcaseVideo",
+    entityId: saved.id,
+    meta: { title: saved.title },
+  });
+
+  revalidatePath("/");
+  revalidatePath(VIDEOS);
+  redirect(`${formPath}?saved=1`);
+}
+
+export async function deleteShowcaseVideo(formData: FormData) {
+  const gate = await gateFor("content.manage");
+  if (gate.error || !gate.session) failure(VIDEOS, gate.error);
+
+  const id = field(formData, "id");
+  const item = await prisma.showcaseVideo.findUnique({ where: { id } });
+  if (!item) redirect(redirectWith(VIDEOS, "error", "Video not found"));
+
+  await prisma.showcaseVideo.delete({ where: { id } });
+  await logAudit({
+    userId: gate.session.user.id,
+    action: "showcaseVideo.delete",
+    entity: "ShowcaseVideo",
+    entityId: id,
+    meta: { title: item.title },
+  });
+  revalidatePath("/");
+  revalidatePath(VIDEOS);
+  redirect(`${VIDEOS}?deleted=1`);
+}
+
 /* -------------------------------------- FAQ -------------------------------------- */
 
 const FAQS = "/admin/faqs";
@@ -113,8 +285,10 @@ const faqInput = z.object({
 });
 
 export async function saveFaq(formData: FormData) {
+  const requestedReturnTo = field(formData, "returnTo");
+  const formPath = requestedReturnTo.startsWith(`${FAQS}/`) ? requestedReturnTo : FAQS;
   const gate = await gateFor("content.manage");
-  if (gate.error || !gate.session) failure(FAQS, gate.error);
+  if (gate.error || !gate.session) failure(formPath, gate.error);
 
   const id = field(formData, "id");
   const parsed = faqInput.safeParse({
@@ -125,7 +299,7 @@ export async function saveFaq(formData: FormData) {
     isActive: checked(formData, "isActive"),
     showOnService: checked(formData, "showOnService"),
   });
-  if (!parsed.success) failure(FAQS, parsed.error.issues[0]?.message);
+  if (!parsed.success) failure(formPath, parsed.error.issues[0]?.message);
 
   const data = {
     question: parsed.data.question,
@@ -139,6 +313,7 @@ export async function saveFaq(formData: FormData) {
   const saved = id
     ? await prisma.fAQ.update({ where: { id }, data })
     : await prisma.fAQ.create({ data });
+  await saveFormTranslations("faq", saved.id, formData, ["question", "answer"]);
 
   await logAudit({
     userId: gate.session.user.id,
@@ -188,8 +363,10 @@ const milestoneInput = z.object({
 });
 
 export async function saveMilestone(formData: FormData) {
+  const requestedReturnTo = field(formData, "returnTo");
+  const formPath = requestedReturnTo.startsWith(`${TIMELINE}/`) ? requestedReturnTo : TIMELINE;
   const gate = await gateFor("content.manage");
-  if (gate.error || !gate.session) failure(TIMELINE, gate.error);
+  if (gate.error || !gate.session) failure(formPath, gate.error);
 
   const id = field(formData, "id");
   const parsed = milestoneInput.safeParse({
@@ -200,7 +377,7 @@ export async function saveMilestone(formData: FormData) {
     sortOrder: numberField(formData, "sortOrder"),
     isPublished: checked(formData, "isPublished"),
   });
-  if (!parsed.success) failure(TIMELINE, parsed.error.issues[0]?.message);
+  if (!parsed.success) failure(formPath, parsed.error.issues[0]?.message);
 
   const data = {
     year: parsed.data.year,
@@ -214,6 +391,7 @@ export async function saveMilestone(formData: FormData) {
   const saved = id
     ? await prisma.companyMilestone.update({ where: { id }, data })
     : await prisma.companyMilestone.create({ data });
+  await saveFormTranslations("milestone", saved.id, formData, ["title", "description"]);
 
   await logAudit({
     userId: gate.session.user.id,
@@ -335,6 +513,7 @@ export async function saveCompanyStat(formData: FormData) {
   const saved = id
     ? await prisma.companyStatistic.update({ where: { id }, data })
     : await prisma.companyStatistic.create({ data });
+  await saveFormTranslations("statistic", saved.id, formData, ["label"]);
 
   await auditAndRedirect(gate.session, {
     action: id ? "statistic.update" : "statistic.create",
@@ -390,6 +569,7 @@ export async function saveCoreValue(formData: FormData) {
   const saved = id
     ? await prisma.coreValue.update({ where: { id }, data })
     : await prisma.coreValue.create({ data });
+  await saveFormTranslations("coreValue", saved.id, formData, ["title", "description"]);
 
   await auditAndRedirect(gate.session, {
     action: id ? "coreValue.update" : "coreValue.create",
@@ -445,6 +625,7 @@ export async function saveProcessStep(formData: FormData) {
   const saved = id
     ? await prisma.processStep.update({ where: { id }, data })
     : await prisma.processStep.create({ data });
+  await saveFormTranslations("processStep", saved.id, formData, ["title", "description"]);
 
   await auditAndRedirect(gate.session, {
     action: id ? "processStep.update" : "processStep.create",
@@ -500,6 +681,7 @@ export async function saveWhyItem(formData: FormData) {
   const saved = id
     ? await prisma.whyChooseItem.update({ where: { id }, data })
     : await prisma.whyChooseItem.create({ data });
+  await saveFormTranslations("whyChoose", saved.id, formData, ["title", "description"]);
 
   await auditAndRedirect(gate.session, {
     action: id ? "whyItem.update" : "whyItem.create",
@@ -556,13 +738,49 @@ export async function saveHomepageSection(formData: FormData) {
   };
 
   await prisma.homepageSection.update({ where: { id }, data });
+  await saveFormTranslations("homepage", id, formData, ["title", "subtitle", "description", "buttonLabel", "secondaryLabel"]);
+
+  const requestedReturnTo = field(formData, "returnTo");
+  const returnTo = /^\/admin\/about(?:\?phase=[0-4])?$/.test(requestedReturnTo)
+    ? requestedReturnTo
+    : ["about", "mission", "vision"].includes(section.key)
+      ? "/admin/about"
+      : HOMEPAGE;
+  const savedUrl = `${returnTo}${returnTo.includes("?") ? "&" : "?"}saved=1#${section.key}`;
 
   await auditAndRedirect(gate.session, {
     action: "homepage.update",
     entity: "HomepageSection",
     entityId: id,
     meta: { key: section.key },
+    paths: ["/", HOMEPAGE, "/admin/about"],
+    success: savedUrl,
+  });
+}
+
+export async function finishAboutUpdate() {
+  const gate = await gateFor("content.manage");
+  if (gate.error || !gate.session) failure("/admin/about?phase=4", gate.error);
+  revalidatePath("/");
+  revalidatePath("/about");
+  revalidatePath("/admin/about");
+  redirect(redirectWith("/admin/about?phase=4", "saved", "About page updated."));
+}
+
+export async function deleteHomepageSection(formData: FormData) {
+  const gate = await gateFor("content.manage");
+  if (gate.error || !gate.session) failure(HOMEPAGE, gate.error);
+  const id = field(formData, "id");
+  const section = await prisma.homepageSection.findUnique({ where: { id } });
+  if (!section) redirect(redirectWith(HOMEPAGE, "error", "Section not found"));
+
+  await prisma.homepageSection.delete({ where: { id } });
+  await auditAndRedirect(gate.session, {
+    action: "homepage.delete",
+    entity: "HomepageSection",
+    entityId: id,
+    meta: { key: section.key },
     paths: ["/", HOMEPAGE],
-    success: `${HOMEPAGE}?saved=1#${section.key}`,
+    success: `${HOMEPAGE}?deleted=1`,
   });
 }

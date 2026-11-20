@@ -173,10 +173,10 @@ const HOMEPAGE_SECTIONS = [
   },
   {
     key: "testimonials",
-    title: "In the words of our clients.",
+    title: "What People Say",
     subtitle: "Testimonials",
     description: "Client feedback will be published here as projects are completed.",
-    sortOrder: 8,
+    sortOrder: 9,
   },
   {
     key: "blog",
@@ -185,7 +185,21 @@ const HOMEPAGE_SECTIONS = [
     description: "Ideas from the studio on how thoughtful spaces come together.",
     buttonLabel: "Read the Journal",
     buttonUrl: "/blog",
-    sortOrder: 9,
+    sortOrder: 8,
+  },
+  {
+    key: "awards",
+    title: "Kayan's honors, trophies, and certificates of appreciation.",
+    subtitle: "Awards & Recognition",
+    description: "The recognition the company has received, published by the studio.",
+    sortOrder: 10,
+  },
+  {
+    key: "videos",
+    title: "Our projects, on video.",
+    subtitle: "Project Videos",
+    description: "Watch recent project walkthroughs and site films from the studio.",
+    sortOrder: 11,
   },
   {
     key: "cta",
@@ -236,6 +250,68 @@ const HOMEPAGE_SECTIONS = [
     description:
       "Tell us about the site, the spaces you need, and how you want them to work. The more detail you share, the more useful our response can be.",
     sortOrder: 15,
+  },
+  {
+    key: "about-values",
+    title: "What guides the work",
+    subtitle: "Our principles",
+    description: "The values below shape how the studio designs, coordinates, and delivers each project.",
+    sortOrder: 16,
+  },
+  {
+    key: "about-process",
+    title: "A considered process",
+    subtitle: "How we work",
+    description: "Each stage keeps design intent, technical detail, and construction reality aligned.",
+    sortOrder: 17,
+  },
+  {
+    key: "about-timeline",
+    title: "The studio, step by step",
+    subtitle: "Timeline",
+    description: "Milestones recorded in the company timeline.",
+    sortOrder: 18,
+  },
+  {
+    key: "about-why",
+    title: "What sets the practice apart",
+    subtitle: "Why Kayan Land",
+    description: "The commitments that shape every commission, from first sketch to final handover.",
+    sortOrder: 19,
+  },
+  {
+    key: "about-team",
+    title: "Team profiles",
+    subtitle: "The people",
+    description: "Published profiles from the studio team.",
+    sortOrder: 20,
+  },
+  {
+    key: "quote-brief",
+    title: "Project brief",
+    description:
+      "Submitting this form does not commit you to anything. It helps the studio understand whether and how it can help.",
+    sortOrder: 23,
+  },
+  {
+    key: "quote-next",
+    title: "What happens next",
+    description:
+      "The studio reviews your site, brief, and any reference files.\nWe reply using your preferred contact details to clarify scope and next steps.\nIf the project is a fit, a written proposal and appointment follow.",
+    sortOrder: 24,
+  },
+  {
+    key: "quote-talk",
+    title: "Prefer to talk?",
+    description: "Use the studio's published contact details for a direct conversation.",
+    sortOrder: 25,
+  },
+  {
+    key: "quote-inclusions",
+    title: "Useful to include",
+    description:
+      "Site location and approximate size\nThe spaces you need and how they will be used\nAny budget range or programme constraints\nPlans, surveys, or reference images",
+    sortOrder: 26,
   },
   {
     key: "privacy",
@@ -410,6 +486,117 @@ const SERVICES = [
     description:
       "Project management connects every party around one plan. We coordinate consultants, track programme and budget, manage procurement, and keep decisions documented.\n\nThe aim is simple: fewer surprises, clearer accountability, and a smoother route from brief to handover.",
     features: ["Consultant coordination", "Budget tracking", "Procurement support", "Risk and issue management"],
+  },
+];
+
+const SAMPLE_TEAM = [
+  {
+    name: "Ahmad Zaki",
+    slug: "ahmad-zaki",
+    jobTitle: "Principal Architect",
+    department: "design",
+    imageUrl: "/images/team/ahmad-zaki.jpg",
+    bio: "Leads architectural design from early concept studies through coordinated construction drawings, with a focus on light, proportion, and everyday use.",
+    skills: "Architectural design, Concept development, Design coordination",
+  },
+  {
+    name: "Laila Safi",
+    slug: "laila-safi",
+    jobTitle: "Interior Designer",
+    department: "design",
+    imageUrl: "/images/team/laila-safi.jpg",
+    bio: "Shapes interior layouts, finishes, and joinery so each room feels calm, practical, and connected to the architecture.",
+    skills: "Interior design, Material selection, Joinery detailing",
+  },
+  {
+    name: "Hamid Rahmani",
+    slug: "hamid-rahmani",
+    jobTitle: "Structural Engineer",
+    department: "engineering",
+    imageUrl: "/images/team/hamid-rahmani.jpg",
+    bio: "Coordinates structural systems with the design team to keep drawings buildable, efficient, and clear on site.",
+    skills: "Structural design, Technical coordination, Site review",
+  },
+  {
+    name: "Mariam Sadat",
+    slug: "mariam-sadat",
+    jobTitle: "Project Manager",
+    department: "management",
+    imageUrl: "/images/team/mariam-sadat.jpg",
+    bio: "Keeps schedules, consultants, and site decisions aligned from the first meeting to handover.",
+    skills: "Project planning, Consultant coordination, Client communication",
+  },
+  {
+    name: "Omid Hashimi",
+    slug: "omid-hashimi",
+    jobTitle: "Site Engineer",
+    department: "construction",
+    imageUrl: "/images/team/omid-hashimi.jpg",
+    bio: "Works with the construction team on site, reviewing details and quality as the building takes shape.",
+    skills: "Site supervision, Quality control, Construction detailing",
+  },
+];
+
+const SAMPLE_TESTIMONIALS = [
+  {
+    clientName: "Farid Ahmadi",
+    clientTitle: "Homeowner",
+    clientCompany: "Private residence",
+    content:
+      "The studio kept every decision clear, from the first sketch to the final handover. The finished space feels calm, practical, and exactly right for our family.",
+    rating: 5,
+  },
+  {
+    clientName: "Zohra Karimi",
+    clientTitle: "Office manager",
+    clientCompany: "Commercial client",
+    content:
+      "Communication stayed consistent through the whole project. Questions were answered quickly and the site work matched the drawings we approved.",
+    rating: 5,
+  },
+  {
+    clientName: "Bashir Noori",
+    clientTitle: "Property owner",
+    clientCompany: "Renovation project",
+    content:
+      "They treated a small renovation with the same care as a larger commission. The details are thoughtful and the result is easy to live with.",
+    rating: 4,
+  },
+];
+
+const SAMPLE_AWARDS = [
+  {
+    title: "Residential Design Recognition",
+    issuer: "Regional Design Review",
+    year: 2025,
+    description: "Recognition for a courtyard residence design study.",
+  },
+  {
+    title: "Interior Detail Award",
+    issuer: "Studio Design Circle",
+    year: 2024,
+    description: "Awarded for material and lighting direction on an interior project.",
+  },
+  {
+    title: "Construction Quality Commendation",
+    issuer: "Building Practice Forum",
+    year: 2024,
+    description: "Commendation for site coordination and finish quality.",
+  },
+];
+
+const SAMPLE_VIDEOS = [
+  {
+    title: "Courtyard Residence — light and material study",
+    description: "A short study of how daylight moves through the courtyard and living spaces.",
+    thumbnailUrl: "/images/project-courtyard.jpg",
+    videoUrl: "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
+  },
+  {
+    title: "Interior sequence — a walk through the main rooms",
+    description: "A quiet walkthrough of the interior palette, joinery, and natural finishes.",
+    thumbnailUrl: "/images/project-interior.jpg",
+    videoUrl: "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/friday.mp4",
   },
 ];
 
@@ -668,17 +855,6 @@ async function seedSettings() {
     });
   }
 
-  if ((await prisma.companyStatistic.count()) === 0) {
-    await prisma.companyStatistic.createMany({
-      data: [
-        { label: "Completed Projects", value: "—", sortOrder: 1 },
-        { label: "Happy Clients", value: "—", sortOrder: 2 },
-        { label: "Years of Experience", value: "—", sortOrder: 3 },
-        { label: "Professional Team Members", value: "—", sortOrder: 4 },
-      ],
-    });
-  }
-
   if ((await prisma.navigationItem.count()) === 0) {
     const header = [
       ["Home", "/"],
@@ -750,6 +926,20 @@ async function seedContent() {
       update: {},
       create: { name, slug, sortOrder: 1 },
     });
+  }
+
+  if ((await prisma.teamMember.count()) === 0) {
+    for (const [index, { department, ...member }] of SAMPLE_TEAM.entries()) {
+      const row = await prisma.department.findUnique({ where: { slug: department } });
+      await prisma.teamMember.create({
+        data: {
+          ...member,
+          departmentId: row?.id ?? null,
+          isPublished: true,
+          sortOrder: index + 1,
+        },
+      });
+    }
   }
 
   if ((await prisma.service.count()) === 0) {
@@ -947,6 +1137,70 @@ async function seedContent() {
         size: 0,
         alt: file.replace(/-/g, " ").replace(".jpg", ""),
       })),
+    });
+  }
+
+  if ((await prisma.testimonial.count()) === 0) {
+    await prisma.testimonial.createMany({
+      data: SAMPLE_TESTIMONIALS.map((item, index) => ({
+        ...item,
+        isPublished: true,
+        sortOrder: index + 1,
+      })),
+    });
+  }
+
+  if ((await prisma.award.count()) === 0) {
+    await prisma.award.createMany({
+      data: SAMPLE_AWARDS.map((item, index) => ({
+        ...item,
+        isPublished: true,
+        sortOrder: index + 1,
+      })),
+    });
+  }
+
+  if ((await prisma.showcaseVideo.count()) === 0) {
+    await prisma.showcaseVideo.createMany({
+      data: SAMPLE_VIDEOS.map((item, index) => ({
+        ...item,
+        isPublished: true,
+        sortOrder: index + 1,
+      })),
+    });
+  }
+
+  await seedStatistics();
+}
+
+// Only counts that already exist on the site are seeded; real company figures stay admin-entered.
+async function seedStatistics() {
+  const [services, projects, gallery, posts] = await Promise.all([
+    prisma.service.count({ where: { isPublished: true, deletedAt: null } }),
+    prisma.project.count({ where: { isPublished: true, deletedAt: null } }),
+    prisma.galleryMedia.count(),
+    prisma.blogPost.count({ where: { status: "PUBLISHED", deletedAt: null } }),
+  ]);
+  const entries = [
+    ["Services Offered", services],
+    ["Portfolio Entries", projects],
+    ["Gallery Images", gallery],
+    ["Journal Articles", posts],
+  ];
+  const existing = await prisma.companyStatistic.findMany({ orderBy: { sortOrder: "asc" } });
+  if (existing.length === 0) {
+    await prisma.companyStatistic.createMany({
+      data: entries.map(([label, value], index) => ({ label, value: String(value), sortOrder: index + 1 })),
+    });
+    return;
+  }
+  const placeholders = existing.filter((row) => !/\d/.test(row.value || ""));
+  for (const [index, row] of placeholders.entries()) {
+    const entry = entries[index];
+    if (!entry) break;
+    await prisma.companyStatistic.update({
+      where: { id: row.id },
+      data: { label: entry[0], value: String(entry[1]) },
     });
   }
 }

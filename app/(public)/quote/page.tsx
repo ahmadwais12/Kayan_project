@@ -5,6 +5,7 @@ import { buildMetadata } from "@/lib/seo";
 import { getLocale } from "@/lib/i18n/server";
 import { getLocalizedSettings, withTranslations } from "@/lib/i18n/content";
 import { getDictionary } from "@/lib/i18n/dictionary";
+import { telHref } from "@/lib/format";
 import { PageHero } from "@/components/public/page-hero";
 import { QuoteForm } from "./quote-form";
 
@@ -27,10 +28,8 @@ export async function generateMetadata() {
 export default async function QuotePage() {
   const locale = await getLocale();
   const t = getDictionary(locale);
-  const expected = [t.expectedStep1, t.expectedStep2, t.expectedStep3];
-  const inclusions = [t.include1, t.include2, t.include3, t.include4];
 
-  const [settings, servicesRaw, introRaw] = await Promise.all([
+  const [settings, servicesRaw, introRaw, copyRaw] = await Promise.all([
     getLocalizedSettings(),
     prisma.service.findMany({
       where: { isPublished: true, deletedAt: null },
@@ -38,15 +37,33 @@ export default async function QuotePage() {
       select: { id: true, title: true },
     }),
     prisma.homepageSection.findUnique({ where: { key: "quote" } }),
+    prisma.homepageSection.findMany({
+      where: {
+        key: { in: ["quote-brief", "quote-next", "quote-talk", "quote-inclusions"] },
+        isEnabled: true,
+      },
+      orderBy: { sortOrder: "asc" },
+    }),
   ]);
 
-  const [services, introRows] = await Promise.all([
+  const [services, introRows, copyRows] = await Promise.all([
     withTranslations("service", servicesRaw, locale, ["title"]),
     introRaw
       ? withTranslations("homepage", [introRaw], locale, ["title", "subtitle", "description"])
       : Promise.resolve([]),
+    withTranslations("homepage", copyRaw, locale, ["title", "subtitle", "description"]),
   ]);
   const intro = introRows[0] || null;
+  const copy = (key: string) => copyRows.find((item) => item.key === key);
+  const lines = (value: string | null | undefined, fallback: string[]) => {
+    const items = (value || "")
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
+    return items.length > 0 ? items : fallback;
+  };
+  const expected = lines(copy("quote-next")?.description, [t.expectedStep1, t.expectedStep2, t.expectedStep3]);
+  const inclusions = lines(copy("quote-inclusions")?.description, [t.include1, t.include2, t.include3, t.include4]);
 
   const projectTypes = [...new Set(services.map((service) => service.title))].slice(0, 10);
 
@@ -64,9 +81,9 @@ export default async function QuotePage() {
       <section className="container-x py-16 lg:py-20">
         <div className="grid gap-12 lg:grid-cols-[1.3fr_1fr] lg:gap-16">
           <div className="border border-border/80 bg-card p-6 sm:p-8">
-            <h2 className="font-display text-2xl text-primary">{t.projectBrief}</h2>
+            <h2 className="font-display text-2xl text-primary">{copy("quote-brief")?.title || t.projectBrief}</h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              {t.briefNote}
+              {copy("quote-brief")?.description || t.briefNote}
             </p>
             <div className="mt-6">
               <QuoteForm projectTypes={projectTypes} locale={locale} />
@@ -75,7 +92,7 @@ export default async function QuotePage() {
 
           <aside className="space-y-5">
             <div className="border border-border/80 bg-card p-6">
-              <h2 className="font-display text-xl text-primary">{t.whatHappensNext}</h2>
+              <h2 className="font-display text-xl text-primary">{copy("quote-next")?.title || t.whatHappensNext}</h2>
               <ol className="mt-4 space-y-4">
                 {expected.map((item, index) => (
                   <li key={item} className="flex items-start gap-3">
@@ -89,9 +106,9 @@ export default async function QuotePage() {
             </div>
 
             <div className="border border-border/80 bg-primary p-6 text-white">
-              <h2 className="font-display text-xl text-white">{t.preferToTalk}</h2>
+              <h2 className="font-display text-xl text-white">{copy("quote-talk")?.title || t.preferToTalk}</h2>
               <p className="mt-2 text-sm leading-relaxed text-white/55">
-                {t.preferTalkDesc}
+                {copy("quote-talk")?.description || t.preferTalkDesc}
               </p>
               <ul className="mt-5 space-y-3 text-sm">
                 {settings.email && (
@@ -103,8 +120,8 @@ export default async function QuotePage() {
                 )}
                 {settings.phone && (
                   <li>
-                    <a href={`tel:${settings.phone.replace(/\s+/g, "")}`} className="flex items-center gap-2.5 text-white/70 hover:text-white">
-                      <Phone className="size-4 text-accent" /> {settings.phone}
+                    <a href={telHref(settings.phone)} className="flex items-center gap-2.5 text-white/70 hover:text-white">
+                      <Phone className="size-4 text-accent" /> <span dir="ltr" className="phone-ltr">{settings.phone}</span>
                     </a>
                   </li>
                 )}
@@ -125,7 +142,7 @@ export default async function QuotePage() {
 
             <div className="border border-border/80 bg-card p-6">
               <h2 className="flex items-center gap-2 font-display text-lg text-primary">
-                <Check className="size-4 text-accent" /> {t.usefulToInclude}
+                <Check className="size-4 text-accent" /> {copy("quote-inclusions")?.title || t.usefulToInclude}
               </h2>
               <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
                 {inclusions.map((item) => (

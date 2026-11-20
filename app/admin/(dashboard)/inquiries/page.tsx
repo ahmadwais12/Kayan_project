@@ -1,21 +1,26 @@
 import Link from "next/link";
-import { Download, Inbox, Search } from "lucide-react";
+import { Inbox, Search } from "lucide-react";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/auth/guards";
 import { PageHeader } from "@/components/admin/page-header";
 import { AdminFlash, flashFromQuery } from "@/components/admin/flash";
-import { Pagination } from "@/components/admin/pagination";
+import { TableFooter } from "@/components/admin/pagination";
+import { FiltersPopover } from "@/components/admin/filters-popover";
+import { FiltersForm } from "@/components/admin/filters-form";
 import { InquiryStatusBadge } from "@/components/admin/status-badge";
+import { ViewButton } from "@/components/admin/view-button";
 import { Button } from "@/components/ui/button";
 import { Input, NativeSelect } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn, formatDateTime } from "@/lib/utils";
+import { parseRows } from "@/lib/pagination";
+import { ExportMenu } from "@/components/admin/export-menu";
 
 export const dynamic = "force-dynamic";
 
-const PAGE_SIZE = 15;
+const DEFAULT_ROWS = 10;
 const STATUSES = ["NEW", "CONTACTED", "IN_PROGRESS", "QUOTATION_SENT", "APPROVED", "REJECTED", "COMPLETED"];
 
 export default async function InquiriesPage({
@@ -26,10 +31,12 @@ export default async function InquiriesPage({
   await requirePermission("inquiries.manage");
   const query = await searchParams;
   const page = Math.max(1, Number(query.page) || 1);
+  const rows = parseRows(query.rows, DEFAULT_ROWS);
   const q = (query.q || "").trim();
   const status = STATUSES.includes(query.status || "") ? query.status! : "";
   const from = /^\d{4}-\d{2}-\d{2}$/.test(query.from || "") ? query.from! : "";
   const to = /^\d{4}-\d{2}-\d{2}$/.test(query.to || "") ? query.to! : "";
+  const activeFilterCount = [q, status, from, to].filter(Boolean).length;
 
   const where: Prisma.ContactInquiryWhereInput = {
     ...(q
@@ -58,8 +65,8 @@ export default async function InquiriesPage({
     prisma.contactInquiry.findMany({
       where,
       orderBy: { createdAt: "desc" },
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip: (page - 1) * rows,
+      take: rows,
       include: { _count: { select: { notes: true, attachments: true } } },
     }),
     prisma.contactInquiry.count({ where }),
@@ -85,11 +92,33 @@ export default async function InquiriesPage({
             <Button asChild variant="outline">
               <Link href="/admin/inquiries/quotes">Quote requests</Link>
             </Button>
-            <Button asChild variant="outline">
-              <a href={`/api/admin/inquiries/export?${exportQuery.toString()}`}>
-                <Download className="size-4" /> Export CSV
-              </a>
-            </Button>
+            <div className="flex items-stretch">
+            <FiltersPopover activeCount={activeFilterCount} triggerClassName="rounded-e-none border-e-0">
+              <FiltersForm resetHref="/admin/inquiries">
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input name="q" defaultValue={q} placeholder="Search name, email or subject" className="pl-9" />
+                </div>
+                <NativeSelect name="status" defaultValue={status} aria-label="Status">
+                  <option value="">All statuses</option>
+                  {STATUSES.map((item) => (
+                    <option key={item} value={item}>{item.replace("_", " ").toLowerCase()}</option>
+                  ))}
+                </NativeSelect>
+                <div>
+                  <span className="mb-1.5 block text-[0.7rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Received</span>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Input name="from" type="date" defaultValue={from} aria-label="Received from" />
+                    <Input name="to" type="date" defaultValue={to} aria-label="Received to" />
+                  </div>
+                </div>
+              </FiltersForm>
+            </FiltersPopover>
+            <ExportMenu
+              href={`/api/admin/inquiries/export?${exportQuery.toString()}`}
+              className="rounded-s-none px-3"
+            />
+            </div>
           </>
         }
       />
@@ -121,22 +150,6 @@ export default async function InquiriesPage({
       </div>
 
       <Card className="overflow-hidden">
-        <form method="get" className="grid gap-3 border-b border-border/70 p-4 sm:grid-cols-2 lg:grid-cols-[1fr_auto_auto_auto_auto]">
-          <div className="relative sm:col-span-2 lg:col-span-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input name="q" defaultValue={q} placeholder="Search name, email or subject" className="pl-9" />
-          </div>
-          <NativeSelect name="status" defaultValue={status} className="lg:w-40" aria-label="Status">
-            <option value="">All statuses</option>
-            {STATUSES.map((item) => (
-              <option key={item} value={item}>{item.replace("_", " ").toLowerCase()}</option>
-            ))}
-          </NativeSelect>
-          <Input name="from" type="date" defaultValue={from} aria-label="Received from" />
-          <Input name="to" type="date" defaultValue={to} aria-label="Received to" />
-          <Button type="submit" variant="secondary">Filter</Button>
-        </form>
-
         {items.length === 0 ? (
           <div className="flex flex-col items-center gap-3 px-6 py-16 text-center">
             <span className="flex size-12 items-center justify-center rounded-full bg-secondary text-primary">
@@ -175,9 +188,9 @@ export default async function InquiriesPage({
                   <TableCell><InquiryStatusBadge status={item.status} /></TableCell>
                   <TableCell className="whitespace-nowrap text-xs text-muted-foreground">{formatDateTime(item.createdAt)}</TableCell>
                   <TableCell className="text-right">
-                    <Button asChild variant="ghost" size="sm">
-                      <Link href={`/admin/inquiries/${item.id}`}>View</Link>
-                    </Button>
+                    <div className="flex items-center justify-end">
+                      <ViewButton href={`/admin/inquiries/${item.id}`} name={item.name} />
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -185,9 +198,15 @@ export default async function InquiriesPage({
           </Table>
         )}
 
-        <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} basePath="/admin/inquiries" params={{ q, status }} />
+        <TableFooter
+          page={page}
+          pageSize={rows}
+          total={total}
+          basePath="/admin/inquiries"
+          params={{ q, status }}
+          noun={total === 1 ? "inquiry" : "inquiries"}
+        />
       </Card>
-      <p className="mt-3 text-xs text-muted-foreground">{total} inquir{total === 1 ? "y" : "ies"} in this view.</p>
     </div>
   );
 }

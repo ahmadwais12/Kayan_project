@@ -71,7 +71,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="flex min-h-full flex-col">
         {children}
-        <Toaster position="top-right" richColors closeButton />
+        <Toaster position={meta.dir === "rtl" ? "top-left" : "top-right"} dir={meta.dir} richColors closeButton />
         <AnalyticsTracker />
       </body>
     </html>

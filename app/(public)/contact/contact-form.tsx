@@ -67,7 +67,7 @@ export function ContactForm({ locale = "en" }: { locale?: Locale }) {
         </div>
         <div>
           <label htmlFor="contact-phone" className={labelClass}>{t.phoneField}</label>
-          <input id="contact-phone" name="phone" maxLength={40} autoComplete="tel" className={inputClass} />
+          <input id="contact-phone" name="phone" maxLength={40} autoComplete="tel" dir="ltr" className={`${inputClass} phone-ltr`} />
         </div>
         <div>
           <label htmlFor="contact-subject" className={labelClass}>{t.subject} *</label>

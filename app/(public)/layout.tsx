@@ -6,8 +6,11 @@ import { getLocalizedSettings } from "@/lib/i18n/content";
 import { getDictionary } from "@/lib/i18n/dictionary";
 import { SiteHeader } from "@/components/public/site-header";
 import { SiteFooter } from "@/components/public/site-footer";
+import { SplashScreen } from "@/components/public/splash-screen";
+import { ScrollReset } from "@/components/public/scroll-reset";
 import { BackToTop } from "@/components/public/back-to-top";
 import { JsonLd } from "@/lib/seo";
+import { toE164 } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +43,7 @@ export default async function PublicLayout({ children }: { children: React.React
     description: settings.siteDescription,
     ...(settings.logoUrl ? { logo: settings.logoUrl.startsWith("http") ? settings.logoUrl : `${base}${settings.logoUrl}` } : {}),
     ...(settings.email ? { email: settings.email } : {}),
-    ...(settings.phone ? { telephone: settings.phone } : {}),
+    ...(settings.phone ? { telephone: toE164(settings.phone) } : {}),
     ...(extras.socials.length ? { sameAs: extras.socials.map((social) => social.url) } : {}),
     ...(settings.address
       ? {
@@ -54,6 +57,8 @@ export default async function PublicLayout({ children }: { children: React.React
 
   return (
     <div className="flex min-h-svh flex-col">
+      <SplashScreen siteName={settings.siteName} logoUrl={settings.logoUrl} />
+      <ScrollReset />
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:text-white"

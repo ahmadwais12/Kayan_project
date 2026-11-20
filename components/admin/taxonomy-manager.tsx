@@ -1,12 +1,10 @@
 import Link from "next/link";
-import { Tag } from "lucide-react";
-import { saveTaxonomy, deleteTaxonomy } from "@/actions/taxonomy";
+import { Plus, Tag } from "lucide-react";
+import { deleteTaxonomy } from "@/actions/taxonomy";
 import { TAXONOMY_META, type TaxonomyEntity } from "@/lib/taxonomy";
 import { DeleteButton } from "@/components/admin/delete-button";
-import { SubmitButton } from "@/components/admin/form-kit";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input, Label, Textarea } from "@/components/ui/input";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -23,7 +21,6 @@ export type TaxonomyItem = {
 export function TaxonomyManager({
   entity,
   items,
-  editId,
   noun,
   description,
   simple = false,
@@ -35,81 +32,15 @@ export function TaxonomyManager({
   description: string;
   simple?: boolean;
 }) {
-  const editing = editId ? items.find((item) => item.id === editId) : undefined;
   const redirectTo = TAXONOMY_META[entity].path;
 
   return (
-    <div className="grid items-start gap-5 xl:grid-cols-[1fr_1.6fr]">
-      <Card>
-        <CardHeader>
-          <CardTitle>{editing ? `Edit ${noun}` : `Add ${noun}`}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form action={saveTaxonomy} className="space-y-4">
-            <input type="hidden" name="entity" value={entity} />
-            <input type="hidden" name="redirectTo" value={redirectTo} />
-            <input type="hidden" name="id" value={editing?.id || ""} />
-            <div>
-              <Label htmlFor="name">Name</Label>
-              <Input id="name" name="name" defaultValue={editing?.name || ""} required maxLength={120} />
-            </div>
-            <div>
-              <Label htmlFor="slug">Slug</Label>
-              <Input
-                id="slug"
-                name="slug"
-                defaultValue={editing?.slug || ""}
-                placeholder="Generated from the name when empty"
-                maxLength={160}
-              />
-            </div>
-            {!simple && (
-              <>
-                <div>
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    name="description"
-                    defaultValue={editing?.description || ""}
-                    rows={3}
-                    maxLength={2000}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="sortOrder">Display order</Label>
-                  <Input
-                    id="sortOrder"
-                    name="sortOrder"
-                    type="number"
-                    min={0}
-                    defaultValue={editing?.sortOrder ?? 0}
-                  />
-                </div>
-                <label className="flex items-center justify-between gap-3 rounded-md border border-border/70 px-3 py-2.5">
-                  <span className="text-sm">Active</span>
-                  <input
-                    type="checkbox"
-                    name="isActive"
-                    defaultChecked={editing ? editing.isActive !== false : true}
-                    className="size-4 accent-[#172B35]"
-                  />
-                </label>
-              </>
-            )}
-            <div className="flex items-center gap-2 pt-1">
-              <SubmitButton>{editing ? "Save changes" : `Add ${noun}`}</SubmitButton>
-              {editing && (
-                <Button asChild variant="outline">
-                  <Link href={redirectTo}>Cancel</Link>
-                </Button>
-              )}
-            </div>
-          </form>
-          <p className="mt-4 text-xs leading-relaxed text-muted-foreground">{description}</p>
-        </CardContent>
-      </Card>
-
+    <div>
       <Card className="overflow-hidden">
+        <CardHeader className="flex-row items-center justify-between gap-3">
+          <CardTitle>{noun.charAt(0).toUpperCase() + noun.slice(1)}s</CardTitle>
+          <Button asChild size="sm"><Link href={`/admin/taxonomy/${entity}/new`}><Plus className="size-4" /> Add {noun}</Link></Button>
+        </CardHeader>
         {items.length === 0 ? (
           <div className="flex flex-col items-center gap-3 px-6 py-16 text-center">
             <span className="flex size-11 items-center justify-center rounded-full bg-secondary text-primary">
@@ -117,7 +48,7 @@ export function TaxonomyManager({
             </span>
             <p className="text-sm font-medium text-primary">No {noun}s yet</p>
             <p className="max-w-xs text-sm text-muted-foreground">
-              Use the form to create your first {noun}.
+              Use the button above to create your first {noun}.
             </p>
           </div>
         ) : (
@@ -150,7 +81,7 @@ export function TaxonomyManager({
                   <TableCell>
                     <div className="flex items-center justify-end gap-1">
                       <Button asChild variant="ghost" size="sm">
-                        <Link href={`${redirectTo}?edit=${item.id}`}>Edit</Link>
+                        <Link href={`/admin/taxonomy/${entity}/${item.id}/edit`}>Edit</Link>
                       </Button>
                       <DeleteButton
                         id={item.id}
@@ -171,6 +102,7 @@ export function TaxonomyManager({
           </Table>
         )}
       </Card>
+      <p className="mt-3 text-xs leading-relaxed text-muted-foreground">{description}</p>
     </div>
   );
 }

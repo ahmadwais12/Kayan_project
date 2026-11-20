@@ -11,7 +11,18 @@ export async function POST(request: Request) {
   if (!session) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!hasPermission(session, "media.manage")) {
+  const uploadPermissions = [
+    "media.manage",
+    "users.manage",
+    "content.manage",
+    "projects.manage",
+    "services.manage",
+    "team.manage",
+    "blog.manage",
+    "gallery.manage",
+    "settings.manage",
+  ] as const;
+  if (!uploadPermissions.some((permission) => hasPermission(session, permission))) {
     return Response.json({ error: "You do not have permission to upload media." }, { status: 403 });
   }
 

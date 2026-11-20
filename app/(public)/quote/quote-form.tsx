@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import Link from "next/link";
 import { Check, Paperclip, Send, TriangleAlert } from "lucide-react";
 import { submitQuote } from "@/actions/public";
+import { MoneyInput } from "@/components/ui/money-input";
 import { initialPublicFormState } from "@/lib/public-forms";
 import { getDictionary } from "@/lib/i18n/dictionary";
 import type { Locale } from "@/lib/i18n/config";
@@ -68,7 +69,7 @@ export function QuoteForm({ projectTypes, locale = "en" }: { projectTypes: strin
         </div>
         <div>
           <label htmlFor="quote-phone" className={labelClass}>{t.phoneField} *</label>
-          <input id="quote-phone" name="phone" required minLength={6} maxLength={40} autoComplete="tel" className={inputClass} />
+          <input id="quote-phone" name="phone" required minLength={6} maxLength={40} autoComplete="tel" dir="ltr" className={`${inputClass} phone-ltr`} />
         </div>
         <div>
           <label htmlFor="quote-projectType" className={labelClass}>{t.projectType} *</label>
@@ -86,7 +87,7 @@ export function QuoteForm({ projectTypes, locale = "en" }: { projectTypes: strin
         </div>
         <div>
           <label htmlFor="quote-budget" className={labelClass}>{t.budgetRange}</label>
-          <input id="quote-budget" name="budget" maxLength={80} placeholder={t.optional} className={inputClass} />
+          <MoneyInput id="quote-budget" name="budget" maxLength={80} placeholder={t.optional} className={inputClass} plain />
         </div>
         <div>
           <label htmlFor="quote-startDate" className={labelClass}>{t.preferredStart}</label>

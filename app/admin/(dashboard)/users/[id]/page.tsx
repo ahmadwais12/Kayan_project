@@ -5,6 +5,7 @@ import { requirePermission } from "@/lib/auth/guards";
 import { PageHeader } from "@/components/admin/page-header";
 import { AdminFlash, flashFromQuery } from "@/components/admin/flash";
 import { SubmitButton } from "@/components/admin/form-kit";
+import { AvatarInput } from "@/components/admin/avatar-input";
 import { saveAdminUser, deleteAdminUser } from "@/actions/users";
 import { DeleteButton } from "@/components/admin/delete-button";
 import { Button } from "@/components/ui/button";
@@ -70,6 +71,11 @@ export default async function EditAdminUserPage({
         <Card>
           <CardHeader><CardTitle>Account details</CardTitle></CardHeader>
           <CardContent className="space-y-4">
+            <AvatarInput
+              name="avatarUrl"
+              defaultValue={user.avatarUrl || ""}
+              help="Optional. Upload a square image (JPG, PNG, WebP or AVIF, up to 8 MB)."
+            />
             <div>
               <Label htmlFor="name">Full name</Label>
               <Input id="name" name="name" defaultValue={user.name} required maxLength={120} />
@@ -117,7 +123,7 @@ export default async function EditAdminUserPage({
                 name="isActive"
                 defaultChecked={user.isActive}
                 disabled={isSelf}
-                className="size-4 accent-[#172B35]"
+                className="size-4 accent-accent"
               />
             </label>
             {isSelf && <input type="hidden" name="isActive" value="on" />}

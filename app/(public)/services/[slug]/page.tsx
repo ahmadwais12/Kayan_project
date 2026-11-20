@@ -6,6 +6,7 @@ import { buildMetadata, JsonLd } from "@/lib/seo";
 import { getLocale } from "@/lib/i18n/server";
 import { getLocalizedSettings, localizeCategoryNames, withTranslations } from "@/lib/i18n/content";
 import { getDictionary } from "@/lib/i18n/dictionary";
+import { telHref } from "@/lib/format";
 import { PageHero } from "@/components/public/page-hero";
 import { Markdown } from "@/components/public/markdown";
 import { GalleryLightbox } from "@/components/public/gallery-lightbox";
@@ -222,10 +223,10 @@ export default async function ServiceDetailPage({
               </div>
               {settings.phone && (
                 <a
-                  href={`tel:${settings.phone.replace(/\s+/g, "")}`}
+                  href={telHref(settings.phone)}
                   className="mt-4 flex items-center gap-2 text-xs text-muted-foreground hover:text-primary"
                 >
-                  <Phone className="size-3.5 text-accent" /> {settings.phone}
+                  <Phone className="size-3.5 text-accent" /> <span dir="ltr" className="phone-ltr">{settings.phone}</span>
                 </a>
               )}
             </div>

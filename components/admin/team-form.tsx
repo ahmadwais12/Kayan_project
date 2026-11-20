@@ -5,12 +5,13 @@ import Link from "next/link";
 import { ExternalLink } from "lucide-react";
 import { saveTeamMember, type TeamState } from "@/actions/team";
 import { Button } from "@/components/ui/button";
-import { Input, Label, NativeSelect, Textarea } from "@/components/ui/input";
+import { Input, Label, NativeSelect } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FormFeedback, SubmitButton, FieldHelp } from "@/components/admin/form-kit";
+import { FormFeedback, SubmitButton } from "@/components/admin/form-kit";
 import { SlugInput } from "@/components/admin/slug-input";
 import { ImageInput } from "@/components/admin/image-input";
-import { MarkdownInput } from "@/components/admin/markdown-input";
+import { LocalizedField } from "@/components/admin/localized-field";
+import type { FormTranslations } from "@/lib/i18n/form-translations";
 
 type LibraryItem = { id: string; url: string; alt?: string | null };
 
@@ -38,10 +39,12 @@ export function TeamForm({
   values,
   departments,
   library,
+  translations,
 }: {
   values: TeamFormValues;
   departments: { id: string; name: string }[];
   library: LibraryItem[];
+  translations?: FormTranslations;
 }) {
   const [state, formAction] = useActionState<TeamState, FormData>(saveTeamMember, {});
 
@@ -64,29 +67,20 @@ export function TeamForm({
               </div>
               <SlugInput defaultValue={values.slug} titleId="name" />
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <Label htmlFor="jobTitle">Job title</Label>
-                <Input id="jobTitle" name="jobTitle" defaultValue={values.jobTitle} required maxLength={160} />
-              </div>
-              <div>
-                <Label htmlFor="departmentId">Department</Label>
-                <NativeSelect id="departmentId" name="departmentId" defaultValue={values.departmentId}>
-                  <option value="">No department</option>
-                  {departments.map((department) => (
-                    <option key={department.id} value={department.id}>
-                      {department.name}
-                    </option>
-                  ))}
-                </NativeSelect>
-              </div>
+            <LocalizedField id="jobTitle" name="jobTitle" label="Job title" defaultValue={values.jobTitle} translations={translations} required maxLength={160} />
+            <div className="sm:max-w-sm">
+              <Label htmlFor="departmentId">Department</Label>
+              <NativeSelect id="departmentId" name="departmentId" defaultValue={values.departmentId}>
+                <option value="">No department</option>
+                {departments.map((department) => (
+                  <option key={department.id} value={department.id}>
+                    {department.name}
+                  </option>
+                ))}
+              </NativeSelect>
             </div>
-            <div>
-              <Label htmlFor="skills">Skills / focus areas</Label>
-              <Input id="skills" name="skills" defaultValue={values.skills} placeholder="Architecture, Interior design, Site supervision" />
-              <FieldHelp>Comma-separated. Displayed as small tags on the profile.</FieldHelp>
-            </div>
-            <MarkdownInput name="bio" defaultValue={values.bio} label="Biography" rows={8} />
+            <LocalizedField id="skills" name="skills" label="Skills / focus areas" defaultValue={values.skills} translations={translations} placeholder="Architecture, Interior design, Site supervision" help="Comma-separated. Displayed as small tags on the profile." />
+            <LocalizedField id="bio" name="bio" label="Biography" defaultValue={values.bio} translations={translations} multiline rows={8} maxLength={20000} help="Markdown is supported: headings, lists, links, bold, italics." />
           </CardContent>
         </Card>
 
@@ -94,15 +88,9 @@ export function TeamForm({
           <CardHeader>
             <CardTitle>Background</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <Label htmlFor="education">Education</Label>
-              <Textarea id="education" name="education" defaultValue={values.education} rows={4} />
-            </div>
-            <div>
-              <Label htmlFor="experience">Experience</Label>
-              <Textarea id="experience" name="experience" defaultValue={values.experience} rows={4} />
-            </div>
+          <CardContent className="space-y-4">
+            <LocalizedField id="education" name="education" label="Education" defaultValue={values.education} translations={translations} multiline rows={4} maxLength={20000} />
+            <LocalizedField id="experience" name="experience" label="Experience" defaultValue={values.experience} translations={translations} multiline rows={4} maxLength={20000} />
           </CardContent>
         </Card>
 
@@ -143,7 +131,7 @@ export function TeamForm({
           <CardContent className="space-y-4">
             <label className="flex items-center justify-between gap-3 rounded-md border border-border/70 px-3 py-2.5">
               <span className="text-sm">Published on website</span>
-              <input type="checkbox" name="isPublished" defaultChecked={values.isPublished} className="size-4 accent-[#172B35]" />
+              <input type="checkbox" name="isPublished" defaultChecked={values.isPublished} className="size-4 accent-accent" />
             </label>
             <div>
               <Label htmlFor="sortOrder">Display order</Label>

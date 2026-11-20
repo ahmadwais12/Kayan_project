@@ -6,9 +6,12 @@ import { SettingsTabs } from "@/components/admin/settings-tabs";
 import { SubmitButton } from "@/components/admin/form-kit";
 import { saveCompanySettings } from "@/actions/settings";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input, Label, Textarea } from "@/components/ui/input";
+import { LocalizedField } from "@/components/admin/localized-field";
+import { loadKeyedTranslations } from "@/lib/i18n/form-translations";
 
 export const dynamic = "force-dynamic";
+
+const TEXT_KEYS = ["siteName", "siteLegalName", "tagline", "siteDescription", "footerAbout", "copyright"];
 
 export default async function GeneralSettingsPage({
   searchParams,
@@ -16,7 +19,11 @@ export default async function GeneralSettingsPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   await requirePermission("settings.manage");
-  const [settings, query] = await Promise.all([getSettings(), searchParams]);
+  const [settings, query, translations] = await Promise.all([
+    getSettings(),
+    searchParams,
+    loadKeyedTranslations("setting", TEXT_KEYS),
+  ]);
 
   return (
     <div>
@@ -34,43 +41,24 @@ export default async function GeneralSettingsPage({
         <Card>
           <CardHeader><CardTitle>Identity</CardTitle></CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <Label htmlFor="siteName">Site name</Label>
-                <Input id="siteName" name="siteName" defaultValue={settings.siteName} required maxLength={120} />
-              </div>
-              <div>
-                <Label htmlFor="siteLegalName">Legal company name</Label>
-                <Input id="siteLegalName" name="siteLegalName" defaultValue={settings.siteLegalName} maxLength={180} />
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="tagline">Tagline</Label>
-              <Input id="tagline" name="tagline" defaultValue={settings.tagline} maxLength={200} />
-            </div>
-            <div>
-              <Label htmlFor="siteDescription">Site description</Label>
-              <Textarea id="siteDescription" name="siteDescription" defaultValue={settings.siteDescription} rows={3} maxLength={400} />
-              <p className="mt-1.5 text-xs text-muted-foreground">Used as the default meta description when a page has none of its own.</p>
-            </div>
+            <LocalizedField id="siteName" name="siteName" label="Site name" defaultValue={settings.siteName} translations={translations} required maxLength={120} />
+            <LocalizedField id="siteLegalName" name="siteLegalName" label="Legal company name" defaultValue={settings.siteLegalName} translations={translations} maxLength={180} />
+            <LocalizedField id="tagline" name="tagline" label="Tagline" defaultValue={settings.tagline} translations={translations} maxLength={200} />
+            <LocalizedField id="siteDescription" name="siteDescription" label="Site description" defaultValue={settings.siteDescription} translations={translations} multiline rows={3} maxLength={400} help="Used as the default meta description when a page has none of its own." />
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader><CardTitle>Footer & copyright</CardTitle></CardHeader>
           <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="footerAbout">Footer introduction</Label>
-              <Textarea id="footerAbout" name="footerAbout" defaultValue={settings.footerAbout} rows={3} maxLength={500} />
-            </div>
-            <div>
-              <Label htmlFor="copyright">Copyright line</Label>
-              <Input id="copyright" name="copyright" defaultValue={settings.copyright} maxLength={200} />
-            </div>
+            <LocalizedField id="footerAbout" name="footerAbout" label="Footer introduction" defaultValue={settings.footerAbout} translations={translations} multiline rows={3} maxLength={500} />
+            <LocalizedField id="copyright" name="copyright" label="Copyright line" defaultValue={settings.copyright} translations={translations} maxLength={200} />
           </CardContent>
         </Card>
 
-        <SubmitButton>Save settings</SubmitButton>
+        <div className="flex justify-end">
+          <SubmitButton>Save settings</SubmitButton>
+        </div>
       </form>
     </div>
   );

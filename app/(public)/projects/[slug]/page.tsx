@@ -28,6 +28,7 @@ import { SmartImage } from "@/components/public/smart-image";
 import { PreviewBanner } from "@/components/public/preview-banner";
 import { isPreviewRequest } from "@/lib/preview";
 import { inquiryStatusLabel } from "@/lib/utils";
+import { formatPrice } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -137,11 +138,11 @@ export default async function ProjectDetailPage({
     }[project.status] || inquiryStatusLabel(project.status);
 
   const meta = [
-    { icon: MapPin, label: t.location, value: project.location },
-    { icon: CalendarDays, label: t.year, value: project.year },
-    { icon: Ruler, label: t.status, value: statusLabel },
-    ...(project.duration ? [{ icon: CalendarDays, label: t.duration, value: project.duration }] : []),
-    ...(project.budget ? [{ icon: Wallet, label: t.budget, value: project.budget }] : []),
+    { icon: MapPin, label: t.location, value: project.location, ltr: false },
+    { icon: CalendarDays, label: t.year, value: project.year, ltr: false },
+    { icon: Ruler, label: t.status, value: statusLabel, ltr: false },
+    ...(project.duration ? [{ icon: CalendarDays, label: t.duration, value: project.duration, ltr: false }] : []),
+    ...(project.budget ? [{ icon: Wallet, label: t.budget, value: formatPrice(project.budget), ltr: true }] : []),
   ];
 
   const base = process.env.APP_URL || "http://localhost:3333";
@@ -244,7 +245,9 @@ export default async function ProjectDetailPage({
                 <dt className="flex items-center gap-2 text-[0.58rem] font-semibold tracking-[0.16em] text-muted-foreground uppercase">
                   <item.icon className="size-3.5 text-accent" /> {item.label}
                 </dt>
-                <dd className="mt-2 font-display text-base text-primary">{item.value || "—"}</dd>
+                <dd className="mt-2 font-display text-base text-primary">
+                  {item.ltr ? <span className="price-ltr">{item.value || "—"}</span> : item.value || "—"}
+                </dd>
               </div>
             ))}
           </dl>

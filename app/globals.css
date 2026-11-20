@@ -29,6 +29,14 @@
   --brand-background: #f3f0e9;
   --brand-muted: #e7e3da;
   --brand-white: #ffffff;
+  --chart-1: #172b35;
+  --chart-2: #c49a68;
+  --chart-3: #4f7a6a;
+  --chart-4: #8a9a9e;
+  --chart-5: #b9af9f;
+  --chart-6: #6e7f84;
+  --chart-grid: #e8e2d6;
+  --chart-tick: #6b7476;
 }
 
 @theme inline {
@@ -87,26 +95,36 @@ body {
    so overrides here must win over inline custom properties. */
 .dark {
   color-scheme: dark;
-  --background: #0e171c !important;
-  --brand-background: #0e171c !important;
-  --foreground: #e9e4d9 !important;
-  --card: #152128 !important;
-  --brand-white: #152128 !important;
-  --card-foreground: #e9e4d9;
-  --popover: #152128;
-  --popover-foreground: #e9e4d9;
-  --primary: #1a2d37 !important;
-  --brand-primary: #1a2d37 !important;
-  --ink: #ece7dc !important;
-  --primary-foreground: #f3efe6;
-  --secondary: #1c2a31;
-  --secondary-foreground: #e9e4d9;
-  --muted: #1c2a31 !important;
-  --brand-muted: #1c2a31 !important;
-  --muted-foreground: #9aa8ae;
-  --border: #2a3a42;
-  --input: #33454e;
+  --background: #121c21 !important;
+  --brand-background: #121c21 !important;
+  --foreground: #f0ebe1 !important;
+  --card: #1b292f !important;
+  --brand-white: #1b292f !important;
+  --card-foreground: #f0ebe1;
+  --popover: #202f36;
+  --popover-foreground: #f0ebe1;
+  --primary: #192d37 !important;
+  --brand-primary: #192d37 !important;
+  --ink: #f0ebe1 !important;
+  --primary-foreground: #f5f0e7;
+  --secondary: #26363d;
+  --secondary-foreground: #f0ebe1;
+  --muted: #26363d !important;
+  --brand-muted: #26363d !important;
+  --muted-foreground: #a6b2b5;
+  --border: #34464d;
+  --input: #40545d;
+  --accent: #d2ad7c !important;
+  --brand-accent: #d2ad7c !important;
   --accent-foreground: #172b35;
+  --chart-1: #d2ad7c;
+  --chart-2: #9fc2d0;
+  --chart-3: #88b49d;
+  --chart-4: #a9bbc0;
+  --chart-5: #d1c2a7;
+  --chart-6: #82969c;
+  --chart-grid: #34464d;
+  --chart-tick: #a6b2b5;
 }
 
 /* `text-primary` is used as the body ink colour across the app; in dark mode
@@ -432,6 +450,84 @@ h4,
   }
 }
 
+@keyframes slider-progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* Intro splash: logo + site name on every full page load. */
+html.splash-lock,
+html.splash-lock body {
+  overflow: hidden;
+}
+
+.splash-root {
+  animation: splash-hide 0.6s ease 2.4s forwards;
+}
+
+@keyframes splash-hide {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+.splash-intro {
+  animation: splash-rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes splash-rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.splash-line {
+  width: 7.5rem;
+  height: 1px;
+  overflow: hidden;
+  background: rgb(255 255 255 / 0.18);
+}
+
+.splash-line::after {
+  content: "";
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transform-origin: left;
+  animation: splash-load 1.9s cubic-bezier(0.65, 0, 0.35, 1) both;
+}
+
+@keyframes splash-load {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .splash-root {
+    animation-delay: 0.4s;
+    animation-duration: 0.15s;
+  }
+  .splash-intro,
+  .splash-line::after {
+    animation-duration: 0.01s;
+    animation-delay: 0s;
+  }
+}
+
 .animate-fade-up {
   animation: fade-up 0.9s var(--ease-out-soft) both;
 }
@@ -511,3 +607,17 @@ h4,
   background: #d8d2c4;
   border-radius: 999px;
 }
+
+/* Phone numbers and prices stay left-to-right in every locale. */
+.phone-ltr,
+.price-ltr {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+[dir="rtl"] .phone-ltr,
+[dir="rtl"] input.phone-ltr,
+[dir="rtl"] textarea.phone-ltr {
+  text-align: right;
+}
+

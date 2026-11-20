@@ -6,7 +6,9 @@ import { SettingsTabs } from "@/components/admin/settings-tabs";
 import { SubmitButton, FieldHelp } from "@/components/admin/form-kit";
 import { saveCompanySettings } from "@/actions/settings";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input, Label, Textarea } from "@/components/ui/input";
+import { Input, Label } from "@/components/ui/input";
+import { LocalizedField } from "@/components/admin/localized-field";
+import { loadKeyedTranslations } from "@/lib/i18n/form-translations";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +18,11 @@ export default async function ContactSettingsPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   await requirePermission("settings.manage");
-  const [settings, query] = await Promise.all([getSettings(), searchParams]);
+  const [settings, query, translations] = await Promise.all([
+    getSettings(),
+    searchParams,
+    loadKeyedTranslations("setting", ["workingHours", "address"]),
+  ]);
 
   return (
     <div>
@@ -40,22 +46,15 @@ export default async function ContactSettingsPage({
               </div>
               <div>
                 <Label htmlFor="phone">Phone</Label>
-                <Input id="phone" name="phone" defaultValue={settings.phone} placeholder="+00 000 000 0000" />
+                <Input id="phone" name="phone" defaultValue={settings.phone} placeholder="+00 000 000 0000" dir="ltr" className="phone-ltr" />
               </div>
               <div>
                 <Label htmlFor="whatsapp">WhatsApp number</Label>
-                <Input id="whatsapp" name="whatsapp" defaultValue={settings.whatsapp} placeholder="+00 000 000 0000" />
-              </div>
-              <div>
-                <Label htmlFor="workingHours">Working hours</Label>
-                <Input id="workingHours" name="workingHours" defaultValue={settings.workingHours} placeholder="Sunday – Thursday, 9:00 – 17:00" />
+                <Input id="whatsapp" name="whatsapp" defaultValue={settings.whatsapp} placeholder="+00 000 000 0000" dir="ltr" className="phone-ltr" />
               </div>
             </div>
-            <div>
-              <Label htmlFor="address">Address</Label>
-              <Textarea id="address" name="address" defaultValue={settings.address} rows={3} maxLength={500} />
-              <FieldHelp>Leave blank until the address is confirmed. Empty fields are hidden from the website.</FieldHelp>
-            </div>
+            <LocalizedField id="workingHours" name="workingHours" label="Working hours" defaultValue={settings.workingHours} translations={translations} maxLength={200} />
+            <LocalizedField id="address" name="address" label="Address" defaultValue={settings.address} translations={translations} multiline rows={3} maxLength={500} help="Leave blank until the address is confirmed. Empty fields are hidden from the website." />
           </CardContent>
         </Card>
 

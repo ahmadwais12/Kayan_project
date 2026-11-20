@@ -17,11 +17,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { initials } from "@/lib/utils";
+import { AdminAvatar } from "@/components/admin/admin-avatar";
+import { LanguageSwitcher } from "@/components/public/language-switcher";
+import type { Locale } from "@/lib/i18n/config";
 
 type Viewer = {
   name: string;
   email: string;
+  avatarUrl?: string | null;
   role: { slug: string; name: string; permissions: string[] };
 };
 
@@ -31,12 +34,14 @@ export function AdminHeader({
   logoUrl,
   notifications = [],
   unreadCount = 0,
+  locale,
 }: {
   viewer: Viewer;
   siteName: string;
   logoUrl?: string | null;
   notifications?: NotificationItem[];
   unreadCount?: number;
+  locale: Locale;
 }) {
   const pathname = usePathname();
   const flat = ADMIN_NAV.flatMap((group) => group.items);
@@ -67,6 +72,7 @@ export function AdminHeader({
       </div>
 
       <div className="flex items-center gap-2">
+        <LanguageSwitcher locale={locale} compact />
         <ThemeToggle className="size-9 rounded-md border-border" />
         <NotificationBell notifications={notifications} unreadCount={unreadCount} />
         <a
@@ -86,9 +92,11 @@ export function AdminHeader({
               className="flex items-center gap-2.5 rounded-full border border-border bg-card py-1 pl-1 pr-3 transition-colors hover:border-primary/25"
               aria-label="Account menu"
             >
-              <span className="grid size-8 place-items-center rounded-full bg-primary text-[0.7rem] font-semibold text-white">
-                {initials(viewer.name)}
-              </span>
+              <AdminAvatar
+                name={viewer.name}
+                avatarUrl={viewer.avatarUrl}
+                className="size-8 bg-primary text-[0.7rem] font-semibold text-white"
+              />
               <span className="hidden text-left sm:block">
                 <span className="block max-w-32 truncate text-xs font-medium text-primary">
                   {viewer.name}
@@ -108,7 +116,7 @@ export function AdminHeader({
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link href="/admin/profile#security">
+              <Link href="/admin/profile?tab=security">
                 <KeyRound className="size-4" /> Change password
               </Link>
             </DropdownMenuItem>

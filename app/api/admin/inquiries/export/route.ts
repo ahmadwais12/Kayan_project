@@ -2,19 +2,12 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth/session";
 import { hasPermission } from "@/lib/auth/permissions";
 import { formatDate, formatDateTime } from "@/lib/utils";
+import { formatPrice, toE164 } from "@/lib/format";
+import { createAdminExport, parseExportFormat } from "@/lib/admin-export";
 
 export const runtime = "nodejs";
 
 const STATUSES = ["NEW", "CONTACTED", "IN_PROGRESS", "QUOTATION_SENT", "APPROVED", "REJECTED", "COMPLETED"];
-
-function cell(value: unknown) {
-  const text = value === null || value === undefined ? "" : String(value);
-  return `"${text.replace(/"/g, '""')}"`;
-}
-
-function csv(rows: unknown[][]) {
-  return `\uFEFF${rows.map((row) => row.map(cell).join(",")).join("\r\n")}\r\n`;
-}
 
 export async function GET(request: Request) {
   const session = await getSession();
@@ -34,7 +27,7 @@ export async function GET(request: Request) {
   const to = /^\d{4}-\d{2}-\d{2}$/.test(toParam) ? toParam : "";
   const projectType = (url.searchParams.get("projectType") || "").trim();
 
-  let body: string;
+  let rows: string[][];
   let filename: string;
 
   if (type === "quote") {
@@ -65,22 +58,22 @@ export async function GET(request: Request) {
       take: 5000,
     });
 
-    body = csv([
+    rows = [
       ["Name", "Email", "Phone", "Project type", "Location", "Budget", "Preferred start", "Status", "Received", "Description"],
       ...items.map((item) => [
         item.name,
         item.email,
-        item.phone,
+        item.phone ? toE164(item.phone) : "",
         item.projectType,
         item.location,
-        item.budget || "",
+        formatPrice(item.budget),
         formatDate(item.startDate),
         item.status,
         formatDateTime(item.createdAt),
         item.description,
       ]),
-    ]);
-    filename = `quote-requests-${new Date().toISOString().slice(0, 10)}.csv`;
+    ];
+    filename = "quote-requests";
   } else {
     const items = await prisma.contactInquiry.findMany({
       where: {
@@ -107,26 +100,20 @@ export async function GET(request: Request) {
       take: 5000,
     });
 
-    body = csv([
+    rows = [
       ["Name", "Email", "Phone", "Subject", "Status", "Received", "Message"],
       ...items.map((item) => [
         item.name,
         item.email,
-        item.phone || "",
+        item.phone ? toE164(item.phone) : "",
         item.subject,
         item.status,
         formatDateTime(item.createdAt),
         item.message,
       ]),
-    ]);
-    filename = `contact-inquiries-${new Date().toISOString().slice(0, 10)}.csv`;
+    ];
+    filename = "contact-inquiries";
   }
 
-  return new Response(body, {
-    headers: {
-      "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="${filename}"`,
-      "Cache-Control": "no-store",
-    },
-  });
+  return createAdminExport(rows, filename, parseExportFormat(url.searchParams.get("format")));
 }

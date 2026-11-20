@@ -51,7 +51,7 @@ function linkTarget(raw: string) {
 export async function getSeoAudit(): Promise<SeoAudit> {
   const seo = await getSeoSettings();
 
-  const [services, projects, posts, serviceImageCount, projectImageCount, mediaImageCount, teamCount, legalCount] =
+  const [services, projects, posts, serviceImageCount, projectImageCount, teamCount, legalCount] =
     await Promise.all([
       prisma.service.findMany({
         where: { isPublished: true, deletedAt: null },
@@ -71,7 +71,6 @@ export async function getSeoAudit(): Promise<SeoAudit> {
       prisma.projectImage.count({
         where: { OR: [{ alt: null }, { alt: "" }], project: { isPublished: true, deletedAt: null } },
       }),
-      prisma.media.count({ where: { OR: [{ alt: null }, { alt: "" }] } }),
       prisma.teamMember.count({ where: { isPublished: true, deletedAt: null } }),
       prisma.homepageSection.count({ where: { key: { in: ["privacy", "terms"] }, description: { not: null } } }),
     ]);
@@ -114,10 +113,9 @@ export async function getSeoAudit(): Promise<SeoAudit> {
     });
   }
 
-  const altCount = serviceImageCount + projectImageCount + mediaImageCount;
+  const altCount = serviceImageCount + projectImageCount;
   if (altCount > 0) {
     const items: AuditItem[] = [];
-    if (mediaImageCount) items.push({ label: `${mediaImageCount} media library file(s)`, href: "/admin/media" });
     if (projectImageCount) items.push({ label: `${projectImageCount} project gallery image(s)`, href: "/admin/projects" });
     if (serviceImageCount) items.push({ label: `${serviceImageCount} service gallery image(s)`, href: "/admin/services" });
     groups.push({

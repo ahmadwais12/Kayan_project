@@ -1,5 +1,4 @@
 import * as React from "react";
-import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
@@ -38,16 +37,65 @@ function Button({
   variant,
   size,
   asChild = false,
+  children,
   ...props
 }: React.ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & { asChild?: boolean }) {
-  const Comp = asChild ? Slot : "button";
+  const classes = cn(buttonVariants({ variant, size, className }));
+
+  if (asChild) {
+    const child = React.Children.only(children);
+    if (!React.isValidElement(child)) {
+      throw new Error("Button with asChild expects a single React element child.");
+    }
+
+    const childProps = child.props as Record<string, unknown>;
+    const buttonProps = { "data-slot": "button", ...props } as Record<string, unknown>;
+    const mergedProps: Record<string, unknown> = { ...buttonProps, ...childProps };
+
+    mergedProps.className = cn(classes, childProps.className as string | undefined);
+    if (props.style || childProps.style) {
+      mergedProps.style = {
+        ...(props.style as React.CSSProperties | undefined),
+        ...(childProps.style as React.CSSProperties | undefined),
+      };
+    }
+
+    for (const key of Object.keys(buttonProps)) {
+      if (!/^on[A-Z]/.test(key)) continue;
+      const buttonHandler = buttonProps[key];
+      const childHandler = childProps[key];
+      if (typeof buttonHandler === "function" && typeof childHandler === "function") {
+        mergedProps[key] = (...args: unknown[]) => {
+          (childHandler as (...values: unknown[]) => void)(...args);
+          (buttonHandler as (...values: unknown[]) => void)(...args);
+        };
+      }
+    }
+
+    if (props.ref && childProps.ref) {
+      const buttonRef = props.ref;
+      const childRef = childProps.ref as React.Ref<HTMLElement>;
+      mergedProps.ref = (node: HTMLButtonElement | null) => {
+        if (typeof childRef === "function") childRef(node);
+        else if (childRef) childRef.current = node;
+
+        if (typeof buttonRef === "function") buttonRef(node);
+        else if (buttonRef) (buttonRef as React.MutableRefObject<HTMLButtonElement | null>).current = node;
+      };
+    }
+
+    return React.cloneElement(child, mergedProps);
+  }
+
   return (
-    <Comp
+    <button
       data-slot="button"
-      className={cn(buttonVariants({ variant, size, className }))}
+      className={classes}
       {...props}
-    />
+    >
+      {children}
+    </button>
   );
 }
 

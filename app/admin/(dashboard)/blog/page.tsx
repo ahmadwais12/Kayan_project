@@ -6,8 +6,11 @@ import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/auth/guards";
 import { PageHeader } from "@/components/admin/page-header";
 import { AdminFlash, flashFromQuery } from "@/components/admin/flash";
-import { Pagination } from "@/components/admin/pagination";
+import { TableFooter } from "@/components/admin/pagination";
 import { DeleteButton } from "@/components/admin/delete-button";
+import { ViewButton } from "@/components/admin/view-button";
+import { FiltersPopover } from "@/components/admin/filters-popover";
+import { FiltersForm } from "@/components/admin/filters-form";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { deleteBlogPost } from "@/actions/blog";
 import { Button } from "@/components/ui/button";
@@ -15,10 +18,11 @@ import { Input, NativeSelect } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDate } from "@/lib/utils";
+import { parseRows } from "@/lib/pagination";
 
 export const dynamic = "force-dynamic";
 
-const PAGE_SIZE = 12;
+const DEFAULT_ROWS = 10;
 const STATUSES = ["DRAFT", "SCHEDULED", "PUBLISHED"];
 
 export default async function BlogPage({
@@ -29,9 +33,11 @@ export default async function BlogPage({
   await requirePermission("blog.manage");
   const query = await searchParams;
   const page = Math.max(1, Number(query.page) || 1);
+  const rows = parseRows(query.rows, DEFAULT_ROWS);
   const q = (query.q || "").trim();
   const status = STATUSES.includes(query.status || "") ? query.status! : "";
   const category = query.category || "";
+  const activeFilterCount = [q, status, category].filter(Boolean).length;
 
   const where: Prisma.BlogPostWhereInput = {
     deletedAt: null,
@@ -44,8 +50,8 @@ export default async function BlogPage({
     prisma.blogPost.findMany({
       where,
       orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip: (page - 1) * rows,
+      take: rows,
       include: { category: { select: { name: true } }, author: { select: { name: true } } },
     }),
     prisma.blogPost.count({ where }),
@@ -66,6 +72,26 @@ export default async function BlogPage({
             <Button asChild variant="outline">
               <Link href="/admin/blog/tags">Tags</Link>
             </Button>
+            <FiltersPopover activeCount={activeFilterCount}>
+              <FiltersForm resetHref="/admin/blog">
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input name="q" defaultValue={q} placeholder="Search articles" className="pl-9" />
+                </div>
+                <NativeSelect name="status" defaultValue={status} aria-label="Status">
+                  <option value="">All statuses</option>
+                  {STATUSES.map((item) => (
+                    <option key={item} value={item}>{item.toLowerCase()}</option>
+                  ))}
+                </NativeSelect>
+                <NativeSelect name="category" defaultValue={category} aria-label="Category">
+                  <option value="">All categories</option>
+                  {categories.map((item) => (
+                    <option key={item.id} value={item.id}>{item.name}</option>
+                  ))}
+                </NativeSelect>
+              </FiltersForm>
+            </FiltersPopover>
             <Button asChild>
               <Link href="/admin/blog/new">
                 <Plus className="size-4" /> New article
@@ -78,26 +104,6 @@ export default async function BlogPage({
       <AdminFlash {...flashFromQuery(query)} />
 
       <Card className="overflow-hidden">
-        <form method="get" className="grid gap-3 border-b border-border/70 p-4 sm:grid-cols-[1fr_auto_auto_auto]">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input name="q" defaultValue={q} placeholder="Search articles" className="pl-9" />
-          </div>
-          <NativeSelect name="status" defaultValue={status} className="sm:w-40">
-            <option value="">All statuses</option>
-            {STATUSES.map((item) => (
-              <option key={item} value={item}>{item.toLowerCase()}</option>
-            ))}
-          </NativeSelect>
-          <NativeSelect name="category" defaultValue={category} className="sm:w-44">
-            <option value="">All categories</option>
-            {categories.map((item) => (
-              <option key={item.id} value={item.id}>{item.name}</option>
-            ))}
-          </NativeSelect>
-          <Button type="submit" variant="secondary">Filter</Button>
-        </form>
-
         {posts.length === 0 ? (
           <div className="flex flex-col items-center gap-3 px-6 py-16 text-center">
             <span className="flex size-12 items-center justify-center rounded-full bg-secondary text-primary">
@@ -153,11 +159,7 @@ export default async function BlogPage({
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center justify-end gap-1">
-                      {post.status === "PUBLISHED" && (
-                        <Button asChild variant="ghost" size="sm">
-                          <Link href={`/blog/${post.slug}`} target="_blank" rel="noreferrer">View</Link>
-                        </Button>
-                      )}
+                      <ViewButton href={`/admin/records/post/${post.id}`} name={post.title} />
                       <Button asChild variant="ghost" size="sm">
                         <Link href={`/admin/blog/${post.id}`}>Edit</Link>
                       </Button>
@@ -175,9 +177,15 @@ export default async function BlogPage({
           </Table>
         )}
 
-        <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} basePath="/admin/blog" params={{ q, status, category }} />
+        <TableFooter
+          page={page}
+          pageSize={rows}
+          total={total}
+          basePath="/admin/blog"
+          params={{ q, status, category }}
+          noun={total === 1 ? "article" : "articles"}
+        />
       </Card>
-      <p className="mt-3 text-xs text-muted-foreground">{total} article{total === 1 ? "" : "s"} in this view.</p>
     </div>
   );
 }

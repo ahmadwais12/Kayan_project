@@ -8,6 +8,10 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: "15mb",
     },
+    staleTimes: {
+      dynamic: 30,
+      static: 180,
+    },
   },
   serverExternalPackages: ["@node-rs/argon2"],
   turbopack: {

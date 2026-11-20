@@ -17,13 +17,16 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata() {
   const locale = await getLocale();
   const t = getDictionary(locale);
-  const section = await prisma.homepageSection.findUnique({ where: { key: "about" } });
+  const [section, settings] = await Promise.all([
+    prisma.homepageSection.findUnique({ where: { key: "about" } }),
+    getLocalizedSettings(),
+  ]);
   const [localized] = section
     ? await withTranslations("homepage", [section], locale, ["title", "subtitle", "description"])
     : [];
   return buildMetadata({
     title: localized?.title || t.aboutStudio,
-    description: localized?.description || t.faqHeroDesc,
+    description: localized?.description || settings.siteDescription,
     path: "/about",
   });
 }
@@ -42,6 +45,7 @@ export default async function AboutPage() {
     milestones,
     team,
     purposeRaw,
+    blocksRaw,
     ctaRaw,
     testimonial,
   ] = await Promise.all([
@@ -62,18 +66,27 @@ export default async function AboutPage() {
       where: { key: { in: ["mission", "vision"] }, isEnabled: true },
       orderBy: { sortOrder: "asc" },
     }),
+    prisma.homepageSection.findMany({
+      where: {
+        key: { in: ["about-values", "about-process", "about-timeline", "about-why", "about-team"] },
+        isEnabled: true,
+      },
+      orderBy: { sortOrder: "asc" },
+    }),
     prisma.homepageSection.findUnique({ where: { key: "cta" } }),
     prisma.testimonial.findFirst({ where: { isPublished: true }, orderBy: { sortOrder: "asc" } }),
   ]);
 
   const sectionFields = ["title", "subtitle", "description", "buttonLabel", "secondaryLabel"];
-  const [aboutRows, purpose, ctaRows] = await Promise.all([
+  const [aboutRows, purpose, localizedBlocks, ctaRows] = await Promise.all([
     aboutRaw ? withTranslations("homepage", [aboutRaw], locale, sectionFields) : Promise.resolve([]),
     withTranslations("homepage", purposeRaw, locale, sectionFields),
+    withTranslations("homepage", blocksRaw, locale, sectionFields),
     ctaRaw ? withTranslations("homepage", [ctaRaw], locale, sectionFields) : Promise.resolve([]),
   ]);
   const about = aboutRows[0] || null;
   const cta = ctaRows[0] || null;
+  const block = (key: string) => localizedBlocks.find((item) => item.key === key);
 
   const departmentRows = [
     ...new Map(team.filter((member) => member.department).map((member) => [member.department!.id, member.department!])).values(),
@@ -160,9 +173,9 @@ export default async function AboutPage() {
       {localizedValues.length > 0 && (
         <section className="container-x py-20 lg:py-24">
           <SectionHeading
-            eyebrow={t.valuesEyebrow}
-            title={t.valuesTitle}
-            description={t.valuesDesc}
+            eyebrow={block("about-values")?.subtitle || t.valuesEyebrow}
+            title={block("about-values")?.title || t.valuesTitle}
+            description={block("about-values")?.description || t.valuesDesc}
           />
           <div className="mt-10 grid gap-x-10 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
             {localizedValues.map((value, index) => (
@@ -182,9 +195,9 @@ export default async function AboutPage() {
         <section className="border-y border-border/70 bg-card/50">
           <div className="container-x py-20 lg:py-24">
             <SectionHeading
-              eyebrow={t.workEyebrow}
-              title={t.processTitle}
-              description={t.processDesc}
+              eyebrow={block("about-process")?.subtitle || t.workEyebrow}
+              title={block("about-process")?.title || t.processTitle}
+              description={block("about-process")?.description || t.processDesc}
               align="center"
             />
             <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
@@ -205,9 +218,9 @@ export default async function AboutPage() {
       {localizedMilestones.length > 0 && (
         <section className="container-x py-20 lg:py-24">
           <SectionHeading
-            eyebrow={t.timelineEyebrow}
-            title={t.timelineTitle}
-            description={t.timelineDesc}
+            eyebrow={block("about-timeline")?.subtitle || t.timelineEyebrow}
+            title={block("about-timeline")?.title || t.timelineTitle}
+            description={block("about-timeline")?.description || t.timelineDesc}
           />
           <ol className="relative mt-12 border-l border-border pl-6 sm:pl-10">
             {localizedMilestones.map((milestone, index) => (
@@ -235,9 +248,9 @@ export default async function AboutPage() {
         <section className="border-t border-border/70 bg-card/40">
           <div className="container-x py-20 lg:py-24">
             <SectionHeading
-              eyebrow={t.whyKayan}
-              title={t.whyTitle}
-              description={t.whyDesc}
+              eyebrow={block("about-why")?.subtitle || t.whyKayan}
+              title={block("about-why")?.title || t.whyTitle}
+              description={block("about-why")?.description || t.whyDesc}
             />
             <div className="mt-10 grid gap-x-10 gap-y-8 sm:grid-cols-2">
               {localizedWhy.map((item, index) => (
@@ -279,9 +292,9 @@ export default async function AboutPage() {
       {teamView.length > 0 && (
         <section className="container-x py-20 lg:py-24">
           <SectionHeading
-            eyebrow={t.peopleEyebrow}
-            title={t.teamProfiles}
-            description={t.teamDesc}
+            eyebrow={block("about-team")?.subtitle || t.peopleEyebrow}
+            title={block("about-team")?.title || t.teamProfiles}
+            description={block("about-team")?.description || t.teamDesc}
             linkHref="/team"
             linkLabel={t.meetTheTeam}
           />

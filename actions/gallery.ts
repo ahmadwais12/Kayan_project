@@ -7,6 +7,7 @@ import { authorize } from "@/lib/auth/guards";
 import { gallerySchema } from "@/lib/validations";
 import { checked, field, numberField, redirectWith } from "@/lib/form-helpers";
 import { logAudit } from "@/lib/audit";
+import { saveFormTranslations } from "@/lib/i18n/form-translations";
 
 export type GalleryState = { error?: string };
 
@@ -54,6 +55,8 @@ export async function saveGalleryItem(
     console.error(error);
     return { error: "The gallery item could not be saved. Please try again." };
   }
+
+  await saveFormTranslations("galleryMedia", saved.id, formData, ["title", "caption"]);
 
   await logAudit({
     userId: gate.session.user.id,

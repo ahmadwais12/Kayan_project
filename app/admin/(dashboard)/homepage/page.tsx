@@ -1,14 +1,18 @@
+import Link from "next/link";
 import { Home } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/auth/guards";
 import { PageHeader } from "@/components/admin/page-header";
 import { AdminFlash, flashFromQuery } from "@/components/admin/flash";
-import { SubmitButton } from "@/components/admin/form-kit";
-import { ImageInput } from "@/components/admin/image-input";
-import { saveHomepageSection } from "@/actions/content";
+import { deleteHomepageSection } from "@/actions/content";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input, Label, Textarea } from "@/components/ui/input";
+import { Card } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { TableFooter } from "@/components/admin/pagination";
+import { DeleteButton } from "@/components/admin/delete-button";
+import { ViewButton } from "@/components/admin/view-button";
+import { Button } from "@/components/ui/button";
+import { parseRows } from "@/lib/pagination";
 
 export const dynamic = "force-dynamic";
 
@@ -23,116 +27,130 @@ const LABELS: Record<string, string> = {
   stats: "Statistics",
   process: "Process",
   testimonials: "Testimonials",
+  awards: "Awards & recognition",
+  videos: "Project videos",
   blog: "Journal / blog",
   cta: "Call to action",
 };
 
-export default async function HomepagePage({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | undefined>>;
-}) {
+const OWNERS: Record<string, { label: string; href: string }> = {
+  about: { label: "About page", href: "/admin/about" },
+  mission: { label: "About page", href: "/admin/about#mission" },
+  vision: { label: "About page", href: "/admin/about#mission" },
+  services: { label: "Services", href: "/admin/services" },
+  projects: { label: "Projects", href: "/admin/projects" },
+  why: { label: "Process & values", href: "/admin/content" },
+  stats: { label: "Process & values", href: "/admin/content" },
+  process: { label: "Process & values", href: "/admin/content" },
+  testimonials: { label: "Testimonials", href: "/admin/testimonials" },
+  awards: { label: "Awards & recognition", href: "/admin/awards" },
+  videos: { label: "Project videos", href: "/admin/videos" },
+  blog: { label: "Blog posts", href: "/admin/blog" },
+  team: { label: "Team members", href: "/admin/team" },
+  gallery: { label: "Gallery", href: "/admin/gallery" },
+  faq: { label: "FAQs", href: "/admin/faqs" },
+  contact: { label: "Contact information", href: "/admin/settings/contact" },
+  quote: { label: "Quote requests", href: "/admin/inquiries/quotes" },
+  "about-values": { label: "Process & values", href: "/admin/content" },
+  "about-process": { label: "Process & values", href: "/admin/content" },
+  "about-timeline": { label: "Company timeline", href: "/admin/timeline" },
+  "about-why": { label: "Process & values", href: "/admin/content" },
+  "about-team": { label: "Team members", href: "/admin/team" },
+  "quote-brief": { label: "Quote requests", href: "/admin/inquiries/quotes" },
+  "quote-next": { label: "Quote requests", href: "/admin/inquiries/quotes" },
+  "quote-talk": { label: "Contact information", href: "/admin/settings/contact" },
+  "quote-inclusions": { label: "Quote requests", href: "/admin/inquiries/quotes" },
+  privacy: { label: "General settings", href: "/admin/settings" },
+  terms: { label: "General settings", href: "/admin/settings" },
+};
+
+export default async function HomepagePage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   await requirePermission("content.manage");
   const query = await searchParams;
-
-  const [sections, media] = await Promise.all([
-    prisma.homepageSection.findMany({ orderBy: [{ sortOrder: "asc" }, { key: "asc" }] }),
-    prisma.media.findMany({ orderBy: { createdAt: "desc" }, take: 100, select: { id: true, url: true, alt: true } }),
-  ]);
+  const rows = parseRows(query.rows, 10);
+  const total = await prisma.homepageSection.count();
+  const pageCount = Math.max(1, Math.ceil(total / rows));
+  const page = Math.min(Math.max(1, Number(query.page) || 1), pageCount);
+  const sections = await prisma.homepageSection.findMany({
+    orderBy: [{ sortOrder: "asc" }, { key: "asc" }],
+    skip: (page - 1) * rows,
+    take: rows,
+  });
 
   return (
-    <div>
-      <PageHeader
-        title="Home page"
-        description="Control the copy and imagery of each homepage section. Lists such as projects and services are managed in their own modules."
-        breadcrumb={[{ label: "Home Page" }]}
-      />
-
+    <div className="space-y-6">
+      <PageHeader title="Home page" description="Review homepage sections in the table and open their dedicated editors as needed." breadcrumb={[{ label: "Home Page" }]} />
       <AdminFlash {...flashFromQuery(query)} />
-
-      {sections.length === 0 ? (
-        <Card className="flex flex-col items-center gap-3 px-6 py-16 text-center">
-          <span className="flex size-12 items-center justify-center rounded-full bg-secondary text-primary">
-            <Home className="size-5" />
-          </span>
-          <p className="text-sm font-medium text-primary">No homepage sections found</p>
-          <p className="max-w-sm text-sm text-muted-foreground">
-            Run the database seed to create the default homepage sections.
-          </p>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {sections.map((section) => (
-            <Card key={section.id} id={section.key}>
-              <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
-                <div className="flex items-center gap-2">
-                  <CardTitle>{LABELS[section.key] || section.key}</CardTitle>
-                  <Badge variant={section.isEnabled ? "success" : "secondary"}>
-                    {section.isEnabled ? "Enabled" : "Disabled"}
-                  </Badge>
-                </div>
-                <span className="text-xs text-muted-foreground">key: {section.key}</span>
-              </CardHeader>
-              <CardContent>
-                <details className="group">
-                  <summary className="cursor-pointer text-sm font-medium text-primary">
-                    Edit section content
-                  </summary>
-                  <form action={saveHomepageSection} className="mt-4 space-y-4">
-                    <input type="hidden" name="id" value={section.id} />
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div>
-                        <Label htmlFor={`${section.key}-title`}>Title</Label>
-                        <Input id={`${section.key}-title`} name="title" defaultValue={section.title || ""} maxLength={200} />
-                      </div>
-                      <div>
-                        <Label htmlFor={`${section.key}-subtitle`}>Subtitle / eyebrow</Label>
-                        <Input id={`${section.key}-subtitle`} name="subtitle" defaultValue={section.subtitle || ""} maxLength={200} />
-                      </div>
-                    </div>
-                    <div>
-                      <Label htmlFor={`${section.key}-description`}>Description</Label>
-                      <Textarea id={`${section.key}-description`} name="description" defaultValue={section.description || ""} rows={4} maxLength={3000} />
-                    </div>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div>
-                        <Label htmlFor={`${section.key}-buttonLabel`}>Primary button label</Label>
-                        <Input id={`${section.key}-buttonLabel`} name="buttonLabel" defaultValue={section.buttonLabel || ""} maxLength={80} />
-                      </div>
-                      <div>
-                        <Label htmlFor={`${section.key}-buttonUrl`}>Primary button URL</Label>
-                        <Input id={`${section.key}-buttonUrl`} name="buttonUrl" defaultValue={section.buttonUrl || ""} maxLength={300} placeholder="/contact" />
-                      </div>
-                      <div>
-                        <Label htmlFor={`${section.key}-secondaryLabel`}>Secondary button label</Label>
-                        <Input id={`${section.key}-secondaryLabel`} name="secondaryLabel" defaultValue={section.secondaryLabel || ""} maxLength={80} />
-                      </div>
-                      <div>
-                        <Label htmlFor={`${section.key}-secondaryUrl`}>Secondary button URL</Label>
-                        <Input id={`${section.key}-secondaryUrl`} name="secondaryUrl" defaultValue={section.secondaryUrl || ""} maxLength={300} placeholder="/projects" />
-                      </div>
-                    </div>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <ImageInput name="imageUrl" defaultValue={section.imageUrl || ""} library={media} label="Section image" help="Used by sections that support imagery, such as the hero or about block." />
-                      <div className="space-y-4">
-                        <div>
-                          <Label htmlFor={`${section.key}-sortOrder`}>Display order</Label>
-                          <Input id={`${section.key}-sortOrder`} name="sortOrder" type="number" min={0} defaultValue={section.sortOrder} />
-                        </div>
-                        <label className="flex items-center justify-between gap-3 rounded-md border border-border/70 px-3 py-2.5">
-                          <span className="text-sm">Enabled</span>
-                          <input type="checkbox" name="isEnabled" defaultChecked={section.isEnabled} className="size-4 accent-[#172B35]" />
-                        </label>
-                      </div>
-                    </div>
-                    <SubmitButton>Save section</SubmitButton>
-                  </form>
-                </details>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+      {total === 0 ? (
+        <Card className="flex flex-col items-center gap-3 px-6 py-16 text-center"><span className="flex size-12 items-center justify-center rounded-full bg-secondary text-primary"><Home className="size-5" /></span><p className="text-sm font-medium text-primary">No homepage sections found</p><p className="max-w-sm text-sm text-muted-foreground">Run the database seed to create the default homepage sections.</p></Card>
+      ) : <>
+        <section className="space-y-3">
+          <div>
+            <h2 className="font-display text-xl text-primary">Homepage sections</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Review the section content and open the right editor from this table.</p>
+          </div>
+          <Card className="overflow-hidden">
+            <div className="overflow-x-auto">
+              <Table className="min-w-[720px]">
+                <TableHeader className="bg-secondary/30">
+                  <TableRow>
+                    <TableHead>Section</TableHead>
+                    <TableHead>Content</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Managed in</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sections.map((section) => {
+                    const homeOnly = ["hero", "cta", "about", "mission", "vision"].includes(section.key);
+                    const owner = OWNERS[section.key];
+                    const href = homeOnly || section.key === "testimonials" ? `/admin/homepage/${section.id}/edit` : owner?.href || "/admin/homepage";
+                    return (
+                      <TableRow key={section.id}>
+                        <TableCell className="font-medium text-primary">{LABELS[section.key] || section.key}</TableCell>
+                        <TableCell className="max-w-sm">
+                          <p className="truncate text-sm text-primary">{section.title || "No title set"}</p>
+                          {section.subtitle && <p className="truncate text-xs text-muted-foreground">{section.subtitle}</p>}
+                        </TableCell>
+                        <TableCell><Badge variant={section.isEnabled ? "success" : "secondary"}>{section.isEnabled ? "Enabled" : "Disabled"}</Badge></TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {section.key === "testimonials" ? (
+                            <Link href="/admin/testimonials" className="underline-offset-4 hover:underline">Entries: Testimonials</Link>
+                          ) : homeOnly ? "Home page" : owner?.label || "Home page"}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center justify-end gap-1">
+                            <ViewButton href={`/admin/records/section/${section.id}`} name={LABELS[section.key] || section.key} />
+                            <Button asChild size="sm" variant="ghost">
+                              <Link href={href}>Edit</Link>
+                            </Button>
+                            <DeleteButton
+                              id={section.id}
+                              action={deleteHomepageSection}
+                              title={`Delete ${LABELS[section.key] || section.key} section?`}
+                              description="This permanently deletes the section and its saved content from the homepage settings."
+                              label={`Delete ${LABELS[section.key] || section.key}`}
+                            />
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+            <TableFooter
+              page={page}
+              pageSize={rows}
+              total={total}
+              basePath="/admin/homepage"
+              params={{ rows: String(rows) }}
+              noun="sections"
+            />
+          </Card>
+        </section>
+      </>}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import useEmblaCarousel from "embla-carousel-react";
 import { ChevronLeft, ChevronRight, Quote, Star } from "lucide-react";
 import { useReducedMotion } from "framer-motion";
@@ -27,10 +27,12 @@ export function TestimonialCarousel({
   autoplayMs?: number;
 }) {
   const reduce = useReducedMotion();
-  const [emblaRef, embla] = useEmblaCarousel({ loop: true, align: "start", duration: 32 });
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [emblaRef, embla] = useEmblaCarousel({ loop: true, align: "start", duration: 42 });
   const [selected, setSelected] = useState(0);
   const [snaps, setSnaps] = useState<number[]>([]);
   const [paused, setPaused] = useState(false);
+  const [visible, setVisible] = useState(false);
 
   const sync = useCallback(() => {
     if (!embla) return;
@@ -49,15 +51,30 @@ export function TestimonialCarousel({
   }, [embla, sync]);
 
   useEffect(() => {
-    if (!embla || reduce || paused || items.length < 2) return;
+    const element = rootRef.current;
+    if (!element || typeof IntersectionObserver === "undefined") {
+      setVisible(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => setVisible(entry.isIntersecting),
+      { rootMargin: "200px 0px" },
+    );
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!embla || reduce || paused || !visible || items.length < 2) return;
     const timer = window.setTimeout(() => embla.scrollNext(), autoplayMs);
     return () => window.clearTimeout(timer);
-  }, [embla, reduce, paused, items.length, autoplayMs, selected]);
+  }, [embla, reduce, paused, visible, items.length, autoplayMs, selected]);
 
   const showControls = items.length > 1;
 
   return (
     <div
+      ref={rootRef}
       className="relative"
       aria-roledescription="carousel"
       aria-label="Client testimonials"
@@ -73,7 +90,7 @@ export function TestimonialCarousel({
               key={item.id}
               className={cn(
                 "min-w-0 flex-[0_0_100%] pl-5",
-                !large && "sm:flex-[0_0_50%] lg:flex-[0_0_33.3333%]",
+                !large && "sm:flex-[0_0_50%]",
               )}
               role="group"
               aria-roledescription="slide"
@@ -167,11 +184,11 @@ export function TestimonialCarousel({
       {showControls && !reduce && (
         <div className="mt-4 h-px w-full overflow-hidden bg-border/60" aria-hidden="true">
           <div
-            key={`${selected}-${paused}`}
+            key={`${selected}-${paused}-${visible}`}
             className="h-full origin-left bg-accent rtl:origin-right"
             style={{
               animation: `testimonial-progress ${autoplayMs}ms linear forwards`,
-              animationPlayState: paused ? "paused" : "running",
+              animationPlayState: paused || !visible ? "paused" : "running",
             }}
           />
         </div>

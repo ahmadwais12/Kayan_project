@@ -6,11 +6,13 @@ import { ExternalLink } from "lucide-react";
 import { saveProject, type ProjectState } from "@/actions/projects";
 import { Button } from "@/components/ui/button";
 import { Input, Label, NativeSelect, Textarea } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/money-input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FormFeedback, SubmitButton, FieldHelp } from "@/components/admin/form-kit";
 import { SlugInput } from "@/components/admin/slug-input";
 import { ImageInput } from "@/components/admin/image-input";
-import { MarkdownInput } from "@/components/admin/markdown-input";
+import { LocalizedField } from "@/components/admin/localized-field";
+import type { FormTranslations } from "@/lib/i18n/form-translations";
 import { Repeater } from "@/components/admin/repeater";
 import { GalleryEditor, type GalleryRow } from "@/components/admin/gallery-editor";
 
@@ -59,10 +61,12 @@ export function ProjectForm({
   values,
   categories,
   library,
+  translations,
 }: {
   values: ProjectFormValues;
   categories: { id: string; name: string }[];
   library: LibraryItem[];
+  translations?: FormTranslations;
 }) {
   const [state, formAction] = useActionState<ProjectState, FormData>(saveProject, {});
 
@@ -78,10 +82,7 @@ export function ProjectForm({
             <CardTitle>Project essentials</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="title">Project title</Label>
-              <Input id="title" name="title" defaultValue={values.title} required maxLength={180} />
-            </div>
+            <LocalizedField id="title" name="title" label="Project title" defaultValue={values.title} translations={translations} required maxLength={180} />
             <div className="grid gap-4 sm:grid-cols-2">
               <SlugInput defaultValue={values.slug} titleId="title" />
               <div>
@@ -96,15 +97,10 @@ export function ProjectForm({
                 </NativeSelect>
               </div>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <Label htmlFor="location">Location</Label>
-                <Input id="location" name="location" defaultValue={values.location} required placeholder="City, country" />
-              </div>
-              <div>
-                <Label htmlFor="year">Completion year</Label>
-                <Input id="year" name="year" defaultValue={values.year} placeholder="2026" />
-              </div>
+            <LocalizedField id="location" name="location" label="Location" defaultValue={values.location} translations={translations} required placeholder="City, country" maxLength={180} />
+            <div className="sm:max-w-[12rem]">
+              <Label htmlFor="year">Completion year</Label>
+              <Input id="year" name="year" defaultValue={values.year} placeholder="2026" />
             </div>
             <div className="grid gap-4 sm:grid-cols-3">
               <div>
@@ -121,7 +117,7 @@ export function ProjectForm({
               </div>
               <div>
                 <Label htmlFor="budget">Budget (private)</Label>
-                <Input id="budget" name="budget" defaultValue={values.budget} placeholder="Not shown publicly" />
+                <MoneyInput id="budget" name="budget" defaultValue={values.budget} placeholder="Not shown publicly" />
               </div>
             </div>
             <div>
@@ -137,13 +133,11 @@ export function ProjectForm({
             <CardTitle>Project story</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <MarkdownInput name="description" defaultValue={values.description} label="Description" rows={10} />
-            <MarkdownInput name="challenges" defaultValue={values.challenges} label="Challenges" rows={5} help="Optional. Shown as a project narrative block." />
-            <MarkdownInput name="solutions" defaultValue={values.solutions} label="Design solutions" rows={5} />
-            <div className="grid gap-4 sm:grid-cols-2">
-              <MarkdownInput name="architecturalDetails" defaultValue={values.architecturalDetails} label="Architectural details" rows={5} />
-              <MarkdownInput name="constructionDetails" defaultValue={values.constructionDetails} label="Construction details" rows={5} />
-            </div>
+            <LocalizedField id="description" name="description" label="Description" defaultValue={values.description} translations={translations} multiline rows={10} maxLength={20000} help="Markdown is supported." />
+            <LocalizedField id="challenges" name="challenges" label="Challenges" defaultValue={values.challenges} translations={translations} multiline rows={5} maxLength={20000} help="Optional. Shown as a project narrative block. Markdown is supported." />
+            <LocalizedField id="solutions" name="solutions" label="Design solutions" defaultValue={values.solutions} translations={translations} multiline rows={5} maxLength={20000} help="Markdown is supported." />
+            <LocalizedField id="architecturalDetails" name="architecturalDetails" label="Architectural details" defaultValue={values.architecturalDetails} translations={translations} multiline rows={5} maxLength={20000} help="Markdown is supported." />
+            <LocalizedField id="constructionDetails" name="constructionDetails" label="Construction details" defaultValue={values.constructionDetails} translations={translations} multiline rows={5} maxLength={20000} help="Markdown is supported." />
           </CardContent>
         </Card>
 
@@ -219,11 +213,11 @@ export function ProjectForm({
           <CardContent className="space-y-4">
             <label className="flex items-center justify-between gap-3 rounded-md border border-border/70 px-3 py-2.5">
               <span className="text-sm">Published on website</span>
-              <input type="checkbox" name="isPublished" defaultChecked={values.isPublished} className="size-4 accent-[#172B35]" />
+              <input type="checkbox" name="isPublished" defaultChecked={values.isPublished} className="size-4 accent-accent" />
             </label>
             <label className="flex items-center justify-between gap-3 rounded-md border border-border/70 px-3 py-2.5">
               <span className="text-sm">Feature on homepage</span>
-              <input type="checkbox" name="isFeatured" defaultChecked={values.isFeatured} className="size-4 accent-[#172B35]" />
+              <input type="checkbox" name="isFeatured" defaultChecked={values.isFeatured} className="size-4 accent-accent" />
             </label>
             <div>
               <Label htmlFor="sortOrder">Display order</Label>
@@ -261,7 +255,7 @@ export function ProjectForm({
           <CardContent className="space-y-4">
             <label className="flex items-center justify-between gap-3 rounded-md border border-border/70 px-3 py-2.5">
               <span className="text-sm">Show comparison slider</span>
-              <input type="checkbox" name="showBeforeAfter" defaultChecked={values.showBeforeAfter} className="size-4 accent-[#172B35]" />
+              <input type="checkbox" name="showBeforeAfter" defaultChecked={values.showBeforeAfter} className="size-4 accent-accent" />
             </label>
             <ImageInput name="beforeImage" defaultValue={values.beforeImage} library={library} label="Before image" />
             <ImageInput name="afterImage" defaultValue={values.afterImage} library={library} label="After image" />

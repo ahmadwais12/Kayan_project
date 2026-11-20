@@ -6,8 +6,11 @@ import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/auth/guards";
 import { PageHeader } from "@/components/admin/page-header";
 import { AdminFlash, flashFromQuery } from "@/components/admin/flash";
-import { Pagination } from "@/components/admin/pagination";
+import { TableFooter } from "@/components/admin/pagination";
 import { DeleteButton } from "@/components/admin/delete-button";
+import { ViewButton } from "@/components/admin/view-button";
+import { FiltersPopover } from "@/components/admin/filters-popover";
+import { FiltersForm } from "@/components/admin/filters-form";
 import { PublishBadge } from "@/components/admin/status-badge";
 import { deleteService } from "@/actions/services";
 import { Button } from "@/components/ui/button";
@@ -15,10 +18,11 @@ import { Input, NativeSelect } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDate } from "@/lib/utils";
+import { parseRows } from "@/lib/pagination";
 
 export const dynamic = "force-dynamic";
 
-const PAGE_SIZE = 12;
+const DEFAULT_ROWS = 10;
 
 export default async function ServicesPage({
   searchParams,
@@ -28,8 +32,10 @@ export default async function ServicesPage({
   await requirePermission("services.manage");
   const query = await searchParams;
   const page = Math.max(1, Number(query.page) || 1);
+  const rows = parseRows(query.rows, DEFAULT_ROWS);
   const q = (query.q || "").trim();
   const category = query.category || "";
+  const activeFilterCount = [q, category].filter(Boolean).length;
 
   const where: Prisma.ServiceWhereInput = {
     deletedAt: null,
@@ -41,8 +47,8 @@ export default async function ServicesPage({
     prisma.service.findMany({
       where,
       orderBy: [{ sortOrder: "asc" }, { updatedAt: "desc" }],
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip: (page - 1) * rows,
+      take: rows,
       include: { category: { select: { name: true } } },
     }),
     prisma.service.count({ where }),
@@ -62,6 +68,22 @@ export default async function ServicesPage({
             <Button asChild variant="outline">
               <Link href="/admin/services/categories">Categories</Link>
             </Button>
+            <FiltersPopover activeCount={activeFilterCount}>
+              <FiltersForm resetHref="/admin/services">
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input name="q" defaultValue={q} placeholder="Search services" className="pl-9" />
+                </div>
+                <NativeSelect name="category" defaultValue={category} aria-label="Category">
+                  <option value="">All categories</option>
+                  {categories.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}
+                    </option>
+                  ))}
+                </NativeSelect>
+              </FiltersForm>
+            </FiltersPopover>
             <Button asChild>
               <Link href="/admin/services/new">
                 <Plus className="size-4" /> New service
@@ -74,22 +96,6 @@ export default async function ServicesPage({
       <AdminFlash {...flash} />
 
       <Card className="overflow-hidden">
-        <form method="get" className="grid gap-3 border-b border-border/70 p-4 sm:grid-cols-[1fr_auto_auto]">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input name="q" defaultValue={q} placeholder="Search services" className="pl-9" />
-          </div>
-          <NativeSelect name="category" defaultValue={category} className="sm:w-52">
-            <option value="">All categories</option>
-            {categories.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name}
-              </option>
-            ))}
-          </NativeSelect>
-          <Button type="submit" variant="secondary">Filter</Button>
-        </form>
-
         {services.length === 0 ? (
           <div className="flex flex-col items-center gap-3 px-6 py-16 text-center">
             <span className="flex size-12 items-center justify-center rounded-full bg-secondary text-primary">
@@ -146,13 +152,7 @@ export default async function ServicesPage({
                   <TableCell className="whitespace-nowrap text-xs text-muted-foreground">{formatDate(service.updatedAt)}</TableCell>
                   <TableCell>
                     <div className="flex items-center justify-end gap-1">
-                      {service.isPublished && (
-                        <Button asChild variant="ghost" size="sm">
-                          <Link href={`/services/${service.slug}`} target="_blank" rel="noreferrer">
-                            View
-                          </Link>
-                        </Button>
-                      )}
+                      <ViewButton href={`/admin/records/service/${service.id}`} name={service.title} />
                       <Button asChild variant="ghost" size="sm">
                         <Link href={`/admin/services/${service.id}`}>Edit</Link>
                       </Button>
@@ -170,12 +170,15 @@ export default async function ServicesPage({
           </Table>
         )}
 
-        <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} basePath="/admin/services" params={{ q, category }} />
+        <TableFooter
+          page={page}
+          pageSize={rows}
+          total={total}
+          basePath="/admin/services"
+          params={{ q, category }}
+          noun={total === 1 ? "service" : "services"}
+        />
       </Card>
-
-      <p className="mt-3 text-xs text-muted-foreground">
-        {total} service{total === 1 ? "" : "s"} in this view.
-      </p>
     </div>
   );
 }

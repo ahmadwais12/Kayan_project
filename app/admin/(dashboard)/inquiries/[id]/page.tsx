@@ -71,7 +71,7 @@ export default async function ContactInquiryDetailPage({
         userAgent={inquiry.userAgent}
         details={[
           { label: "Subject", value: inquiry.subject },
-          { label: "Phone", value: inquiry.phone || "" },
+          { label: "Phone", value: inquiry.phone || "", ltr: true },
         ]}
         message={inquiry.message}
         messageLabel="Message"

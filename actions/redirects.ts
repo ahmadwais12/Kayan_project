@@ -28,14 +28,16 @@ const redirectSchema = z.object({
   isActive: z.boolean(),
 });
 
-function invalid(message: string): never {
-  redirect(redirectWith(PATH, "error", message));
+function invalid(message: string, returnTo = PATH): never {
+  redirect(redirectWith(returnTo, "error", message));
 }
 
 export async function saveRedirect(formData: FormData) {
+  const requestedReturnTo = field(formData, "returnTo");
+  const formPath = requestedReturnTo.startsWith(`${PATH}/`) ? requestedReturnTo : PATH;
   const gate = await authorize("settings.manage");
   if (gate.error || !gate.session) {
-    redirect(redirectWith(PATH, "error", gate.error || "Unauthorized"));
+    redirect(redirectWith(formPath, "error", gate.error || "Unauthorized"));
   }
 
   const id = field(formData, "id");
@@ -46,21 +48,21 @@ export async function saveRedirect(formData: FormData) {
     statusCode: numberField(formData, "statusCode", 301),
     isActive: checked(formData, "isActive"),
   });
-  if (!parsed.success) invalid(parsed.error.issues[0]?.message || "Invalid redirect");
+  if (!parsed.success) invalid(parsed.error.issues[0]?.message || "Invalid redirect", formPath);
 
   const toPath = parsed.data.toPath;
   const internal = toPath.startsWith("/");
 
-  if (!fromPath.startsWith("/") || fromPath.startsWith("//")) invalid("Source must be a path beginning with a single slash.");
-  if (fromPath === "/") invalid("The home page cannot be redirected.");
-  if (fromPath.includes("?") || fromPath.includes("#")) invalid("Source paths cannot contain query strings or fragments.");
-  if (/^\/(admin|api|_next)(\/|$)/.test(fromPath)) invalid("Admin, API, and asset paths cannot be redirected.");
-  if (!internal && !/^https?:\/\//i.test(toPath)) invalid("Destination must start with / or be a full http(s) URL.");
-  if (internal && toPath.startsWith("//")) invalid("Destination cannot start with //.");
-  if (internal && normalizePath(toPath) === fromPath) invalid("Source and destination are the same path.");
+  if (!fromPath.startsWith("/") || fromPath.startsWith("//")) invalid("Source must be a path beginning with a single slash.", formPath);
+  if (fromPath === "/") invalid("The home page cannot be redirected.", formPath);
+  if (fromPath.includes("?") || fromPath.includes("#")) invalid("Source paths cannot contain query strings or fragments.", formPath);
+  if (/^\/(admin|api|_next)(\/|$)/.test(fromPath)) invalid("Admin, API, and asset paths cannot be redirected.", formPath);
+  if (!internal && !/^https?:\/\//i.test(toPath)) invalid("Destination must start with / or be a full http(s) URL.", formPath);
+  if (internal && toPath.startsWith("//")) invalid("Destination cannot start with //.", formPath);
+  if (internal && normalizePath(toPath) === fromPath) invalid("Source and destination are the same path.", formPath);
 
   const existing = await prisma.redirect.findUnique({ where: { fromPath } });
-  if (existing && existing.id !== id) invalid("A redirect for this source path already exists.");
+  if (existing && existing.id !== id) invalid("A redirect for this source path already exists.", formPath);
 
   const data = {
     fromPath,

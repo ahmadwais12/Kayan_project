@@ -8,6 +8,7 @@ import { AdminFlash, flashFromQuery } from "@/components/admin/flash";
 import { TeamForm } from "@/components/admin/team-form";
 import { Button } from "@/components/ui/button";
 import { formatDateTime } from "@/lib/utils";
+import { loadFormTranslations } from "@/lib/i18n/form-translations";
 
 export const dynamic = "force-dynamic";
 
@@ -22,10 +23,11 @@ export default async function EditTeamMemberPage({
   const { id } = await params;
   const query = await searchParams;
 
-  const [member, departments, media] = await Promise.all([
+  const [member, departments, media, translations] = await Promise.all([
     prisma.teamMember.findFirst({ where: { id, deletedAt: null } }),
     prisma.department.findMany({ orderBy: { sortOrder: "asc" }, select: { id: true, name: true } }),
     prisma.media.findMany({ orderBy: { createdAt: "desc" }, take: 100, select: { id: true, url: true, alt: true } }),
+    loadFormTranslations("teamMember", id, ["jobTitle", "bio", "skills", "education", "experience"]),
   ]);
 
   if (!member) notFound();
@@ -57,6 +59,7 @@ export default async function EditTeamMemberPage({
       <TeamForm
         departments={departments}
         library={media}
+        translations={translations}
         values={{
           id: member.id,
           name: member.name,

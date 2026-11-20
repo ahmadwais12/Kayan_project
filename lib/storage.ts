@@ -17,8 +17,11 @@ const ATTACHMENT_TYPES = new Set([
   "image/webp",
 ]);
 
+const VIDEO_TYPES = new Set(["video/mp4", "video/webm"]);
+
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+const MAX_VIDEO_BYTES = 60 * 1024 * 1024;
 
 const EXT_BY_MIME: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -26,6 +29,8 @@ const EXT_BY_MIME: Record<string, string> = {
   "image/webp": "webp",
   "image/avif": "avif",
   "application/pdf": "pdf",
+  "video/mp4": "mp4",
+  "video/webm": "webm",
 };
 
 async function monthDirectory(base: string) {
@@ -94,6 +99,39 @@ export async function saveImage(file: File): Promise<StoredImage> {
   };
 }
 
+export type StoredVideo = {
+  url: string;
+  size: number;
+  mimeType: string;
+};
+
+export async function saveVideo(file: File): Promise<StoredVideo> {
+  if (!VIDEO_TYPES.has(file.type)) {
+    throw new Error("Unsupported video type. Use MP4 or WebM.");
+  }
+  if (file.size > MAX_VIDEO_BYTES) {
+    throw new Error("Video is larger than 60 MB.");
+  }
+
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const isMp4 = buffer.subarray(4, 8).toString("ascii") === "ftyp";
+  const isWebm = buffer.subarray(0, 4).equals(Buffer.from([0x1a, 0x45, 0xdf, 0xa3]));
+  if (!isMp4 && !isWebm) {
+    throw new Error("The uploaded file is not a valid MP4 or WebM video.");
+  }
+
+  const { directory, relative } = await monthDirectory(PUBLIC_UPLOAD_DIR);
+  const extension = isWebm ? "webm" : "mp4";
+  const fileName = `${randomUUID()}.${extension}`;
+  await writeFile(path.join(directory, fileName), buffer);
+
+  return {
+    url: `/api/media/${relative}/${fileName}`,
+    size: file.size,
+    mimeType: extension === "webm" ? "video/webm" : "video/mp4",
+  };
+}
+
 export type StoredAttachment = {
   fileName: string;
   filePath: string;
@@ -144,6 +182,8 @@ const CONTENT_TYPES: Record<string, string> = {
   ".png": "image/png",
   ".avif": "image/avif",
   ".pdf": "application/pdf",
+  ".mp4": "video/mp4",
+  ".webm": "video/webm",
 };
 
 function safeResolve(base: string, relativePath: string) {

@@ -1,19 +1,20 @@
-import Link from "next/link";
 import { Search, ScrollText } from "lucide-react";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/auth/guards";
 import { PageHeader } from "@/components/admin/page-header";
-import { Pagination } from "@/components/admin/pagination";
+import { TableFooter } from "@/components/admin/pagination";
+import { FiltersPopover } from "@/components/admin/filters-popover";
+import { FiltersForm } from "@/components/admin/filters-form";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input, NativeSelect } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDateTime } from "@/lib/utils";
+import { parseRows } from "@/lib/pagination";
 
 export const dynamic = "force-dynamic";
 
-const PAGE_SIZE = 25;
+const DEFAULT_ROWS = 25;
 
 export default async function AuditPage({
   searchParams,
@@ -23,10 +24,12 @@ export default async function AuditPage({
   await requirePermission("audit.view");
   const query = await searchParams;
   const page = Math.max(1, Number(query.page) || 1);
+  const rows = parseRows(query.rows, DEFAULT_ROWS);
   const q = (query.q || "").trim();
   const action = (query.action || "").trim();
   const entity = (query.entity || "").trim();
   const actor = (query.actor || "").trim();
+  const activeFilterCount = [q, action, entity, actor].filter(Boolean).length;
 
   const where: Prisma.AuditLogWhereInput = {
     ...(q
@@ -47,8 +50,8 @@ export default async function AuditPage({
     prisma.auditLog.findMany({
       where,
       orderBy: { createdAt: "desc" },
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip: (page - 1) * rows,
+      take: rows,
       include: { user: { select: { id: true, name: true, email: true } } },
     }),
     prisma.auditLog.count({ where }),
@@ -68,11 +71,32 @@ export default async function AuditPage({
         description="A chronological record of administrative actions: sign-ins, content changes, settings updates, and deletions."
         breadcrumb={[{ label: "Recent Activity" }]}
         actions={
-          total > 0 ? (
-            <Button asChild variant="outline">
-              <Link href="/admin/audit">Reset filters</Link>
-            </Button>
-          ) : undefined
+          <FiltersPopover activeCount={activeFilterCount}>
+            <FiltersForm resetHref="/admin/audit">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input name="q" defaultValue={q} placeholder="Search action, entity or record id" className="pl-9" />
+              </div>
+              <NativeSelect name="actor" defaultValue={actor} aria-label="Administrator">
+                <option value="">All administrators</option>
+                {actors.map((item) => (
+                  <option key={item.id} value={item.id}>{item.name}</option>
+                ))}
+              </NativeSelect>
+              <NativeSelect name="entity" defaultValue={entity} aria-label="Entity">
+                <option value="">All entities</option>
+                {entities.map((item) => (
+                  <option key={item.entity} value={item.entity}>{item.entity}</option>
+                ))}
+              </NativeSelect>
+              <NativeSelect name="action" defaultValue={action} aria-label="Action">
+                <option value="">All actions</option>
+                {actions.map((item) => (
+                  <option key={item.action} value={item.action}>{item.action}</option>
+                ))}
+              </NativeSelect>
+            </FiltersForm>
+          </FiltersPopover>
         }
       />
 
@@ -92,32 +116,6 @@ export default async function AuditPage({
       </div>
 
       <Card className="overflow-hidden">
-        <form method="get" className="grid gap-3 border-b border-border/70 p-4 lg:grid-cols-[1fr_auto_auto_auto_auto]">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input name="q" defaultValue={q} placeholder="Search action, entity or record id" className="pl-9" />
-          </div>
-          <NativeSelect name="actor" defaultValue={actor} className="lg:w-48">
-            <option value="">All administrators</option>
-            {actors.map((item) => (
-              <option key={item.id} value={item.id}>{item.name}</option>
-            ))}
-          </NativeSelect>
-          <NativeSelect name="entity" defaultValue={entity} className="lg:w-40">
-            <option value="">All entities</option>
-            {entities.map((item) => (
-              <option key={item.entity} value={item.entity}>{item.entity}</option>
-            ))}
-          </NativeSelect>
-          <NativeSelect name="action" defaultValue={action} className="lg:w-48">
-            <option value="">All actions</option>
-            {actions.map((item) => (
-              <option key={item.action} value={item.action}>{item.action}</option>
-            ))}
-          </NativeSelect>
-          <Button type="submit" variant="secondary">Filter</Button>
-        </form>
-
         {logs.length === 0 ? (
           <div className="flex flex-col items-center gap-3 px-6 py-16 text-center">
             <span className="flex size-12 items-center justify-center rounded-full bg-secondary text-primary">
@@ -175,18 +173,15 @@ export default async function AuditPage({
           </Table>
         )}
 
-        <Pagination
+        <TableFooter
           page={page}
-          totalPages={Math.ceil(total / PAGE_SIZE)}
+          pageSize={rows}
+          total={total}
           basePath="/admin/audit"
           params={{ q, action, entity, actor }}
+          noun={total === 1 ? "entry" : "entries"}
         />
       </Card>
-
-      <p className="mt-3 text-xs text-muted-foreground">
-        {total} entr{total === 1 ? "y" : "ies"} matching this view. Audit entries are immutable and
-        retained for accountability.
-      </p>
     </div>
   );
 }

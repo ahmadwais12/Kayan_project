@@ -5,8 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/auth/guards";
 import { PageHeader } from "@/components/admin/page-header";
 import { AdminFlash, flashFromQuery } from "@/components/admin/flash";
-import { GalleryItemForm } from "@/components/admin/gallery-item-form";
 import { DeleteButton } from "@/components/admin/delete-button";
+import { ViewButton } from "@/components/admin/view-button";
 import { deleteGalleryItem } from "@/actions/gallery";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,16 +22,10 @@ export default async function GalleryPage({
   await requirePermission("gallery.manage");
   const query = await searchParams;
 
-  const [items, categories, media] = await Promise.all([
-    prisma.galleryMedia.findMany({
-      orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
-      include: { category: { select: { name: true } } },
-    }),
-    prisma.galleryCategory.findMany({ orderBy: { sortOrder: "asc" }, select: { id: true, name: true } }),
-    prisma.media.findMany({ orderBy: { createdAt: "desc" }, take: 100, select: { id: true, url: true, alt: true } }),
-  ]);
-
-  const editing = query.edit ? items.find((item) => item.id === query.edit) : undefined;
+  const items = await prisma.galleryMedia.findMany({
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
+    include: { category: { select: { name: true } } },
+  });
 
   return (
     <div>
@@ -45,7 +39,7 @@ export default async function GalleryPage({
               <Link href="/admin/gallery/categories">Categories</Link>
             </Button>
             <Button asChild>
-              <Link href="/admin/gallery">
+              <Link href="/admin/gallery/new">
                 <Plus className="size-4" /> New item
               </Link>
             </Button>
@@ -55,25 +49,6 @@ export default async function GalleryPage({
 
       <AdminFlash {...flashFromQuery(query)} />
 
-      <div className="mb-8">
-        <GalleryItemForm
-          key={editing?.id || "new"}
-          editHref="/admin/gallery"
-          categories={categories}
-          library={media}
-          values={{
-            id: editing?.id,
-            title: editing?.title || "",
-            caption: editing?.caption || "",
-            categoryId: editing?.categoryId || "",
-            url: editing?.url || "",
-            type: editing?.type || "IMAGE",
-            isPublished: editing?.isPublished ?? true,
-            sortOrder: editing?.sortOrder ?? 0,
-          }}
-        />
-      </div>
-
       <div className="mb-4 flex items-center justify-between">
         <h2 className="font-display text-xl text-primary">Gallery items</h2>
         <p className="text-xs text-muted-foreground">{items.length} item{items.length === 1 ? "" : "s"}</p>
@@ -81,7 +56,7 @@ export default async function GalleryPage({
 
       {items.length === 0 ? (
         <Card className="p-10 text-center text-sm text-muted-foreground">
-          Nothing in the gallery yet. Add your first item above.
+          Nothing in the gallery yet. Use New item to add the first image.
         </Card>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
@@ -104,9 +79,12 @@ export default async function GalleryPage({
                   </p>
                 </div>
                 <div className="flex items-center justify-between">
-                  <Button asChild variant="outline" size="sm">
-                    <Link href={`/admin/gallery?edit=${item.id}`}>Edit</Link>
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <ViewButton href={`/admin/records/gallery/${item.id}`} name={item.title || "Untitled"} />
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={`/admin/gallery/${item.id}/edit`}>Edit</Link>
+                    </Button>
+                  </div>
                   <DeleteButton
                     id={item.id}
                     action={deleteGalleryItem}

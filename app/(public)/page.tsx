@@ -6,6 +6,7 @@ import {
   Layers,
   Ruler,
   Sparkles,
+  Trophy,
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getLocale } from "@/lib/i18n/server";
@@ -22,6 +23,9 @@ import { CtaBand } from "@/components/public/cta-band";
 import { CountUp } from "@/components/public/count-up";
 import { ScrollCue } from "@/components/public/scroll-cue";
 import { TestimonialCarousel } from "@/components/public/testimonial-carousel";
+import { VideoShowcase } from "@/components/public/video-showcase";
+import { SmoothSlider } from "@/components/public/smooth-slider";
+import { youtubeId } from "@/lib/video";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +52,8 @@ export default async function HomePage() {
     stats,
     processSteps,
     testimonials,
+    awards,
+    videos,
     postsRaw,
     projectCount,
     serviceCount,
@@ -71,6 +77,8 @@ export default async function HomePage() {
     prisma.companyStatistic.findMany({ where: { isActive: true }, orderBy: { sortOrder: "asc" } }),
     prisma.processStep.findMany({ where: { isActive: true }, orderBy: { sortOrder: "asc" } }),
     prisma.testimonial.findMany({ where: { isPublished: true }, orderBy: { sortOrder: "asc" }, take: 3 }),
+    prisma.award.findMany({ where: { isPublished: true }, orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }], take: 6 }),
+    prisma.showcaseVideo.findMany({ where: { isPublished: true }, orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }], take: 6 }),
     prisma.blogPost.findMany({
       where: { status: "PUBLISHED", publishedAt: { lte: new Date() }, deletedAt: null },
       orderBy: { publishedAt: "desc" },
@@ -82,7 +90,7 @@ export default async function HomePage() {
     prisma.teamMember.count({ where: { isPublished: true, deletedAt: null } }),
   ]);
 
-  const [sections, services, projects, posts, whyItems, statsItems, processItems, testimonialItems] =
+  const [sections, services, projects, posts, whyItems, statsItems, processItems, testimonialItems, awardItems, videoItems] =
     await Promise.all([
       withTranslations("homepage", sectionsRaw, locale, [
         "title",
@@ -104,6 +112,8 @@ export default async function HomePage() {
       withTranslations("statistic", stats, locale, ["label"]),
       withTranslations("processStep", processSteps, locale, ["title", "description"]),
       withTranslations("testimonial", testimonials, locale, ["content", "clientTitle", "clientCompany"]),
+      withTranslations("award", awards, locale, ["title", "issuer", "description"]),
+      withTranslations("showcaseVideo", videos, locale, ["title", "description"]),
     ]);
 
   const section = (key: string) => sections.find((item) => item.key === key);
@@ -115,12 +125,20 @@ export default async function HomePage() {
   const statsCopy = section("stats");
   const processCopy = section("process");
   const testimonialsCopy = section("testimonials");
+  const awardsCopy = section("awards");
+  const videosCopy = section("videos");
   const blogCopy = section("blog");
   const cta = section("cta");
   const marqueeHalf = [...services, ...services].map((service, index) => ({
     id: `${service.id}-${index}`,
     title: service.title,
   }));
+  const heroCounters = [
+    { label: t.publishedProjects, value: projectCount },
+    { label: t.services, value: serviceCount },
+    { label: t.teamProfiles, value: teamCount },
+  ].filter((item) => item.value > 0);
+  const visibleStats = statsItems.filter((stat) => /\d/.test(String(stat.value ?? "")));
 
   return (
     <>
@@ -167,18 +185,16 @@ export default async function HomePage() {
           </div>
 
           <div className="animate-fade-up" style={{ animationDelay: "360ms" }}>
-            <div className="relative mt-14 grid max-w-lg grid-cols-3 gap-4 border-t border-white/12 pt-6">
-              {[
-                { label: t.publishedProjects, value: String(projectCount).padStart(2, "0") },
-                { label: t.services, value: String(serviceCount).padStart(2, "0") },
-                { label: t.teamProfiles, value: String(teamCount).padStart(2, "0") },
-              ].map((item) => (
-                <div key={item.label}>
-                  <CountUp value={item.value} className="font-display text-2xl text-white" />
-                  <p className="mt-1 text-[0.6rem] font-semibold tracking-[0.12em] text-white/40 uppercase">{item.label}</p>
-                </div>
-              ))}
-            </div>
+            {heroCounters.length > 0 && (
+              <div className="relative mt-14 flex max-w-lg flex-wrap items-start gap-x-12 gap-y-4 border-t border-white/12 pt-6">
+                {heroCounters.map((item) => (
+                  <div key={item.label}>
+                    <CountUp value={String(item.value).padStart(2, "0")} className="font-display text-2xl text-white" />
+                    <p className="mt-1 text-[0.6rem] font-semibold tracking-[0.12em] text-white/40 uppercase">{item.label}</p>
+                  </div>
+                ))}
+              </div>
+            )}
             <div className="mt-9">
               <ScrollCue href="#studio" label={t.discoverStudio} />
             </div>
@@ -221,7 +237,7 @@ export default async function HomePage() {
       )}
 
       {/* About */}
-      {about && (
+      {about && (about.title || about.description) && (
         <section id="studio" className="container-x py-20 lg:py-28">
           <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-20">
             <Reveal>
@@ -355,7 +371,7 @@ export default async function HomePage() {
       )}
 
       {/* Stats */}
-      {statsCopy && statsItems.length > 0 && (
+      {statsCopy && visibleStats.length > 0 && (
         <section className="border-b border-border/70 bg-background">
           <div className="container-x py-14 lg:py-16">
             {statsCopy.title && (
@@ -364,7 +380,7 @@ export default async function HomePage() {
               </p>
             )}
             <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-              {statsItems.map((stat) => (
+              {visibleStats.map((stat) => (
                 <div key={stat.id} className="text-center">
                   <p className="font-display text-[clamp(2.4rem,4vw,3.4rem)] leading-none text-primary">
                     <CountUp value={stat.value} />
@@ -375,6 +391,31 @@ export default async function HomePage() {
                   </p>
                 </div>
               ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Project videos */}
+      {videosCopy && videoItems.length > 0 && (
+        <section className="border-y border-border/70 bg-card/50">
+          <div className="container-x py-20 lg:py-24">
+            <SectionHeading
+              eyebrow={videosCopy.subtitle || t.videosLabel}
+              title={videosCopy.title}
+              description={videosCopy.description}
+            />
+            <div className="mt-10">
+              <VideoShowcase
+                items={videoItems.map((video) => ({
+                  id: video.id,
+                  title: video.title,
+                  description: video.description,
+                  youtubeId: youtubeId(video.youtubeUrl),
+                  videoUrl: video.videoUrl,
+                  thumbnailUrl: video.thumbnailUrl,
+                }))}
+              />
             </div>
           </div>
         </section>
@@ -405,6 +446,26 @@ export default async function HomePage() {
         </section>
       )}
 
+      {/* Journal */}
+      {blogCopy && posts.length > 0 && (
+        <section className="container-x py-20 lg:py-24">
+          <SectionHeading
+            eyebrow={blogCopy.subtitle || t.journalLabel}
+            title={blogCopy.title}
+            description={blogCopy.description}
+            linkHref="/blog"
+            linkLabel={t.allArticles}
+          />
+          <div className="mt-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+            {posts.map((post, index) => (
+              <Reveal key={post.id} delay={index * 0.05}>
+                <BlogCard post={{ ...post, excerpt: post.excerpt, category: post.category, author: post.author }} locale={locale} />
+              </Reveal>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Testimonials */}
       {testimonialsCopy && testimonialItems.length > 0 && (
         <section className="border-y border-border/70 bg-card/50">
@@ -427,43 +488,62 @@ export default async function HomePage() {
                   photoUrl: testimonial.photoUrl,
                   rating: testimonial.rating,
                 }))}
-                autoplayMs={6500}
+                autoplayMs={7000}
               />
             </div>
           </div>
         </section>
       )}
 
-      {/* Journal */}
-      {blogCopy && posts.length > 0 && (
+      {/* Awards */}
+      {awardsCopy && awardItems.length > 0 && (
         <section className="container-x py-20 lg:py-24">
           <SectionHeading
-            eyebrow={blogCopy.subtitle || t.journalLabel}
-            title={blogCopy.title}
-            description={blogCopy.description}
-            linkHref="/blog"
-            linkLabel={t.allArticles}
+            eyebrow={awardsCopy.subtitle || t.awardsLabel}
+            title={awardsCopy.title}
+            description={awardsCopy.description}
+            align="center"
           />
-          <div className="mt-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {posts.map((post, index) => (
-              <Reveal key={post.id} delay={index * 0.05}>
-                <BlogCard post={{ ...post, excerpt: post.excerpt, category: post.category, author: post.author }} locale={locale} />
-              </Reveal>
-            ))}
+          <div className="mt-12">
+            <SmoothSlider ariaLabel="Awards and recognition" autoplayMs={7000} slideClassName="sm:flex-[0_0_50%]">
+              {awardItems.map((award) => (
+                <article key={award.id} className="flex h-full flex-col gap-4 border border-border/70 bg-card p-6">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="relative grid size-12 place-items-center overflow-hidden rounded-full bg-secondary text-accent-foreground">
+                      {award.imageUrl ? (
+                        <SmartImage src={award.imageUrl} alt={award.title} fill sizes="48px" className="rounded-full object-cover" />
+                      ) : (
+                        <Trophy className="size-5" />
+                      )}
+                    </span>
+                    {award.year ? (
+                      <span className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">{award.year}</span>
+                    ) : null}
+                  </div>
+                  <div>
+                    <h3 className="font-display text-lg leading-snug text-primary">{award.title}</h3>
+                    {award.issuer && <p className="mt-1 text-xs uppercase tracking-[0.12em] text-muted-foreground">{award.issuer}</p>}
+                  </div>
+                  {award.description && <p className="text-sm leading-relaxed text-muted-foreground">{award.description}</p>}
+                </article>
+              ))}
+            </SmoothSlider>
           </div>
         </section>
       )}
 
-      <CtaBand
-        eyebrow={cta?.subtitle}
-        title={cta?.title}
-        description={cta?.description}
-        buttonLabel={cta?.buttonLabel}
-        buttonUrl={cta?.buttonUrl}
-        secondaryLabel={cta?.secondaryLabel}
-        secondaryUrl={cta?.secondaryUrl}
-        locale={locale}
-      />
+      {cta && (
+        <CtaBand
+          eyebrow={cta.subtitle}
+          title={cta.title}
+          description={cta.description}
+          buttonLabel={cta.buttonLabel}
+          buttonUrl={cta.buttonUrl}
+          secondaryLabel={cta.secondaryLabel}
+          secondaryUrl={cta.secondaryUrl}
+          locale={locale}
+        />
+      )}
     </>
   );
 }

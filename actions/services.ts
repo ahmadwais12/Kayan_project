@@ -8,6 +8,7 @@ import { authorize } from "@/lib/auth/guards";
 import { serviceSchema } from "@/lib/validations";
 import { checked, field, jsonArray, numberField } from "@/lib/form-helpers";
 import { logAudit } from "@/lib/audit";
+import { saveFormTranslations } from "@/lib/i18n/form-translations";
 
 export type ServiceState = { error?: string };
 
@@ -126,6 +127,14 @@ export async function saveService(
 
       return record;
     });
+
+    await saveFormTranslations("service", saved.id, formData, [
+      "title",
+      "shortDescription",
+      "description",
+      "seoTitle",
+      "seoDescription",
+    ]);
 
     await logAudit({
       userId: gate.session.user.id,

@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/admin/page-header";
 import { AdminFlash, flashFromQuery } from "@/components/admin/flash";
 import { BlogForm } from "@/components/admin/blog-form";
 import { Button } from "@/components/ui/button";
+import { loadFormTranslations } from "@/lib/i18n/form-translations";
 import { formatDateTime } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -29,7 +30,7 @@ export default async function EditBlogPostPage({
   const { id } = await params;
   const query = await searchParams;
 
-  const [post, categories, authors, media] = await Promise.all([
+  const [post, categories, authors, media, translations] = await Promise.all([
     prisma.blogPost.findFirst({
       where: { id, deletedAt: null },
       include: { tags: { include: { tag: true } } },
@@ -37,6 +38,7 @@ export default async function EditBlogPostPage({
     prisma.blogCategory.findMany({ orderBy: { sortOrder: "asc" }, select: { id: true, name: true } }),
     prisma.blogAuthor.findMany({ where: { isActive: true }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
     prisma.media.findMany({ orderBy: { createdAt: "desc" }, take: 100, select: { id: true, url: true, alt: true } }),
+    loadFormTranslations("blog", id, ["title", "excerpt", "content"]),
   ]);
 
   if (!post) notFound();
@@ -69,6 +71,7 @@ export default async function EditBlogPostPage({
         categories={categories}
         authors={authors}
         library={media}
+        translations={translations}
         values={{
           id: post.id,
           title: post.title,

@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { authorize } from "@/lib/auth/guards";
 import { checked, field, numberField, redirectWith } from "@/lib/form-helpers";
 import { logAudit } from "@/lib/audit";
+import { saveKeyedTranslations } from "@/lib/i18n/form-translations";
 import { MAX_SOCIAL_LINKS } from "@/lib/social-platforms";
 
 const COMPANY_KEYS = [
@@ -70,6 +71,8 @@ export async function saveCompanySettings(formData: FormData) {
   }
 
   if (updated === 0) redirect(redirectWith(safeReturn, "error", "No settings were submitted"));
+
+  await saveKeyedTranslations(formData, "setting", [...COMPANY_KEYS]);
 
   await logAudit({
     userId: gate.session.user.id,
@@ -141,8 +144,12 @@ const navSchema = z.object({
 });
 
 export async function saveNavigationItem(formData: FormData) {
+  const requestedReturnTo = field(formData, "returnTo");
+  const formPath = requestedReturnTo.startsWith("/admin/settings/navigation/")
+    ? requestedReturnTo
+    : "/admin/settings/navigation";
   const gate = await authorize("settings.manage");
-  if (gate.error || !gate.session) redirect(redirectWith("/admin/settings/navigation", "error", gate.error || "Unauthorized"));
+  if (gate.error || !gate.session) redirect(redirectWith(formPath, "error", gate.error || "Unauthorized"));
 
   const id = field(formData, "id");
   const parsed = navSchema.safeParse({
@@ -154,7 +161,7 @@ export async function saveNavigationItem(formData: FormData) {
     isActive: checked(formData, "isActive"),
     openInNewTab: checked(formData, "openInNewTab"),
   });
-  if (!parsed.success) redirect(redirectWith("/admin/settings/navigation", "error", parsed.error.issues[0]?.message));
+  if (!parsed.success) redirect(redirectWith(formPath, "error", parsed.error.issues[0]?.message));
 
   const data = {
     label: parsed.data.label,
@@ -227,6 +234,8 @@ export async function saveSocialLink(formData: FormData) {
 
   const id = field(formData, "id");
   const returnTo = socialReturn(formData);
+  const requestedSuccessTo = field(formData, "successTo");
+  const successTo = requestedSuccessTo.startsWith("/admin/") ? requestedSuccessTo : returnTo;
   const parsed = socialSchema.safeParse({
     platform: field(formData, "platform"),
     url: field(formData, "url"),
@@ -268,7 +277,7 @@ export async function saveSocialLink(formData: FormData) {
   revalidatePath("/");
   revalidatePath("/admin/settings/social");
   revalidatePath("/admin/social");
-  redirect(redirectWith(returnTo, "saved"));
+  redirect(redirectWith(successTo, "saved"));
 }
 
 export async function deleteSocialLink(formData: FormData) {
@@ -359,6 +368,11 @@ export async function saveFooterSettings(formData: FormData) {
   }
 
   if (updated === 0) redirect(redirectWith("/admin/settings/footer", "error", "No footer fields were submitted"));
+
+  const footerKeys = [...formData.keys()]
+    .filter((key) => key.startsWith("footer:") && !key.includes("__"))
+    .map((key) => key.slice("footer:".length));
+  await saveKeyedTranslations(formData, "footerSetting", footerKeys, { prefix: "footer:" });
 
   await logAudit({
     userId: gate.session.user.id,

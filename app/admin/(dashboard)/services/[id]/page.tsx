@@ -8,6 +8,7 @@ import { AdminFlash, flashFromQuery } from "@/components/admin/flash";
 import { ServiceForm } from "@/components/admin/service-form";
 import { Button } from "@/components/ui/button";
 import { formatDateTime } from "@/lib/utils";
+import { loadFormTranslations } from "@/lib/i18n/form-translations";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +23,7 @@ export default async function EditServicePage({
   const { id } = await params;
   const query = await searchParams;
 
-  const [service, categories, media] = await Promise.all([
+  const [service, categories, media, translations] = await Promise.all([
     prisma.service.findFirst({
       where: { id, deletedAt: null },
       include: {
@@ -33,6 +34,7 @@ export default async function EditServicePage({
     }),
     prisma.serviceCategory.findMany({ orderBy: { sortOrder: "asc" }, select: { id: true, name: true } }),
     prisma.media.findMany({ orderBy: { createdAt: "desc" }, take: 100, select: { id: true, url: true, alt: true } }),
+    loadFormTranslations("service", id, ["title", "shortDescription", "description", "seoTitle", "seoDescription"]),
   ]);
 
   if (!service) notFound();
@@ -66,6 +68,7 @@ export default async function EditServicePage({
       <ServiceForm
         categories={categories}
         library={media}
+        translations={translations}
         values={{
           id: service.id,
           title: service.title,

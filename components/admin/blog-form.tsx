@@ -10,7 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FormFeedback, SubmitButton, FieldHelp } from "@/components/admin/form-kit";
 import { SlugInput } from "@/components/admin/slug-input";
 import { ImageInput } from "@/components/admin/image-input";
-import { MarkdownInput } from "@/components/admin/markdown-input";
+import { LocalizedField } from "@/components/admin/localized-field";
+import type { FormTranslations } from "@/lib/i18n/form-translations";
 
 type LibraryItem = { id: string; url: string; alt?: string | null };
 
@@ -38,11 +39,13 @@ export function BlogForm({
   categories,
   authors,
   library,
+  translations,
 }: {
   values: BlogFormValues;
   categories: { id: string; name: string }[];
   authors: { id: string; name: string }[];
   library: LibraryItem[];
+  translations?: FormTranslations;
 }) {
   const [state, formAction] = useActionState<BlogState, FormData>(saveBlogPost, {});
 
@@ -58,17 +61,10 @@ export function BlogForm({
             <CardTitle>Article</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="title">Title</Label>
-              <Input id="title" name="title" defaultValue={values.title} required maxLength={180} />
-            </div>
+            <LocalizedField id="title" name="title" label="Title" defaultValue={values.title} translations={translations} required maxLength={180} />
             <SlugInput defaultValue={values.slug} titleId="title" />
-            <div>
-              <Label htmlFor="excerpt">Excerpt</Label>
-              <Textarea id="excerpt" name="excerpt" defaultValue={values.excerpt} rows={3} maxLength={500} required />
-              <FieldHelp>Shown in the blog listing and in search previews.</FieldHelp>
-            </div>
-            <MarkdownInput name="content" defaultValue={values.content} label="Article content" rows={18} />
+            <LocalizedField id="excerpt" name="excerpt" label="Excerpt" defaultValue={values.excerpt} translations={translations} multiline rows={3} maxLength={500} required help="Shown in the blog listing and in search previews." />
+            <LocalizedField id="content" name="content" label="Article content" defaultValue={values.content} translations={translations} multiline rows={18} maxLength={50000} help="Markdown is supported: headings, lists, links, bold, italics." />
           </CardContent>
         </Card>
 
@@ -152,7 +148,7 @@ export function BlogForm({
             </div>
             <label className="flex items-center justify-between gap-3 rounded-md border border-border/70 px-3 py-2.5">
               <span className="text-sm">Feature on homepage</span>
-              <input type="checkbox" name="isFeatured" defaultChecked={values.isFeatured} className="size-4 accent-[#172B35]" />
+              <input type="checkbox" name="isFeatured" defaultChecked={values.isFeatured} className="size-4 accent-accent" />
             </label>
             <div className="flex flex-col gap-2 pt-1">
               <SubmitButton className="w-full">Save article</SubmitButton>

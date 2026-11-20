@@ -7,6 +7,7 @@ import { authorize } from "@/lib/auth/guards";
 import { blogSchema } from "@/lib/validations";
 import { checked, field, numberField } from "@/lib/form-helpers";
 import { logAudit } from "@/lib/audit";
+import { saveFormTranslations } from "@/lib/i18n/form-translations";
 import { parseList, slugify } from "@/lib/utils";
 
 export type BlogState = { error?: string };
@@ -111,6 +112,8 @@ export async function saveBlogPost(
 
       return record;
     });
+
+    await saveFormTranslations("blog", saved.id, formData, ["title", "excerpt", "content"]);
 
     await logAudit({
       userId: gate.session.user.id,

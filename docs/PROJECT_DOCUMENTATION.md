@@ -100,7 +100,7 @@ Motion is CSS-first so that above-the-fold content is painted without waiting fo
 | Animated statistics | `components/public/count-up.tsx` | Counts numeric values once in view via `IntersectionObserver`; non-numeric values render unchanged. |
 | Hero and scroll cue | `app/globals.css`, `components/public/scroll-cue.tsx` | Slow image zoom, staggered text reveal, animated scroll indicator, discipline marquee band. |
 | Testimonials | `components/public/testimonial-carousel.tsx` | Embla carousel with autoplay (paused on hover/focus), arrows and dots, optional client photo. |
-| Project layout | `components/public/project-browser.tsx` | Grid/masonry switch persisted in `localStorage`; renders the same server-fetched projects. |
+| Project layout | `components/public/project-browser.tsx` | Table/grid switch persisted in `localStorage`, with Table as the default; renders the same server-fetched projects. |
 | Gallery lightbox | `components/public/gallery-lightbox.tsx` | Keyboard navigation plus zoom (`+`/`-`/`0` or click), with zoom reset per slide. |
 
 All motion respects `prefers-reduced-motion`: `CountUp` jumps to the target value, the carousel stops autoplaying, and smooth scrolling falls back to an instant jump.

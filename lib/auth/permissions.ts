@@ -21,7 +21,7 @@ export const PERMISSIONS: { key: PermissionKey; label: string; group: string }[]
   { key: "team.manage", label: "Manage team", group: "Content" },
   { key: "blog.manage", label: "Manage blog", group: "Content" },
   { key: "gallery.manage", label: "Manage gallery", group: "Content" },
-  { key: "media.manage", label: "Manage media library", group: "Content" },
+  { key: "media.manage", label: "Upload images for content", group: "Content" },
   { key: "inquiries.manage", label: "Manage inquiries", group: "Customers" },
   { key: "settings.manage", label: "Manage settings", group: "Administration" },
   { key: "users.manage", label: "Manage administrators and roles", group: "Administration" },

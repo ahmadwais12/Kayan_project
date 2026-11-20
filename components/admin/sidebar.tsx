@@ -3,9 +3,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react";
-import { cn, initials } from "@/lib/utils";
-import { ADMIN_NAV } from "@/components/admin/nav-items";
+import { LogOut, Menu, PanelLeftClose, PanelLeftOpen, UserRound } from "lucide-react";
+import { logoutAction } from "@/actions/auth";
+import { cn } from "@/lib/utils";
+import { AdminAvatar } from "@/components/admin/admin-avatar";
+import { ADMIN_NAV, type AdminNavItem } from "@/components/admin/nav-items";
 import { SiteLogo } from "@/components/site-logo";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { hasPermission } from "@/lib/auth/permissions";
@@ -13,6 +15,7 @@ import { hasPermission } from "@/lib/auth/permissions";
 type Viewer = {
   name: string;
   email: string;
+  avatarUrl?: string | null;
   role: { slug: string; name: string; permissions: string[] };
 };
 
@@ -35,23 +38,27 @@ function NavContent({
 }) {
   const pathname = usePathname();
   const sessionShape = { user: { role: viewer.role } };
+  const profileActive = pathname === "/admin/profile" || pathname.startsWith("/admin/profile/");
+
+  const isItemActive = (item: AdminNavItem) =>
+    item.exact
+      ? pathname === item.href
+      : pathname === item.href || pathname.startsWith(`${item.href}/`);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div
         className={cn(
-          "relative flex shrink-0 border-b border-white/10",
-          collapsed
-            ? "flex-col items-center justify-center gap-3 px-2 py-4"
-            : "items-center gap-3 px-5 py-5",
+          "flex shrink-0 items-center border-b border-border/60",
+          collapsed ? "flex-col gap-2 px-2 py-4" : "gap-2 px-3.5 py-4",
         )}
       >
         <SiteLogo
           name={siteName}
           logoUrl={logoUrl}
-          light
           compact={collapsed}
           hideTagline
+          className={cn(collapsed ? "justify-center" : "min-w-0")}
         />
         {onToggle && (
           <button
@@ -60,74 +67,96 @@ function NavContent({
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             className={cn(
-              "grid size-7 place-items-center rounded-md border border-white/15 text-white/55 transition-colors hover:border-accent/60 hover:text-accent",
-              !collapsed && "absolute right-3 top-4",
+              "grid size-7 shrink-0 place-items-center rounded-md border border-border/70 text-muted-foreground transition-colors hover:border-accent hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50",
+              !collapsed && "ml-auto",
             )}
           >
-            {collapsed ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}
+            {collapsed ? <PanelLeftOpen className="size-3.5" /> : <PanelLeftClose className="size-3.5" />}
           </button>
         )}
       </div>
 
-      <nav className="admin-scroll flex-1 overflow-y-auto overflow-x-hidden px-3 py-5">
-        {ADMIN_NAV.map((group, groupIndex) => {
+      <nav
+        aria-label="Admin navigation"
+        className={cn(
+          "admin-scroll flex-1 overflow-y-auto overflow-x-hidden py-3",
+          collapsed ? "px-2" : "px-2.5",
+        )}
+      >
+        {ADMIN_NAV.map((group, index) => {
           const items = group.items.filter(
             (item) => !item.permission || hasPermission(sessionShape, item.permission),
           );
           if (!items.length) return null;
+
           return (
-            <div key={group.label} className={collapsed ? "mb-3" : "mb-6"}>
-              {collapsed ? (
-                groupIndex > 0 && <div className="mx-auto mb-3 h-px w-6 bg-white/10" />
-              ) : (
-                <p className="px-2.5 pb-2 text-[0.6rem] font-semibold uppercase tracking-[0.2em] text-white/35">
+            <div
+              key={group.label}
+              className={cn(
+                collapsed
+                  ? index > 0 && "mt-2.5 border-t border-border/60 pt-2.5"
+                  : "mb-4 last:mb-0",
+              )}
+            >
+              {!collapsed && (
+                <p className="px-2 pb-1.5 text-[0.56rem] font-bold uppercase tracking-[0.22em] text-muted-foreground/70">
                   {group.label}
                 </p>
               )}
-              <ul className="space-y-1">
+
+              <ul className={cn(collapsed ? "flex flex-col items-center gap-1" : "space-y-0.5")}>
                 {items.map((item) => {
-                  const active = item.exact
-                    ? pathname === item.href
-                    : pathname === item.href || pathname.startsWith(`${item.href}/`);
+                  const active = isItemActive(item);
                   const Icon = item.icon;
                   const badge = item.href === "/admin/notifications" ? unreadCount : 0;
                   return (
-                    <li key={item.href}>
+                    <li key={item.href} className={cn(collapsed && "w-full")}>
                       <Link
                         href={item.href}
                         onClick={onNavigate}
                         title={collapsed ? item.label : undefined}
+                        aria-label={collapsed ? item.label : undefined}
+                        aria-current={active ? "page" : undefined}
                         className={cn(
-                          "group relative flex items-center rounded-md py-2 text-[0.82rem] transition-colors",
-                          collapsed ? "justify-center px-0" : "gap-2.5 px-2.5",
+                          "group relative flex items-center transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50",
+                          collapsed
+                            ? "mx-auto size-10 justify-center rounded-lg"
+                            : "gap-2.5 rounded-lg py-2 pl-2 pr-2.5 text-[0.86rem]",
                           active
-                            ? "bg-white/10 text-white"
-                            : "text-white/60 hover:bg-white/5 hover:text-white",
+                            ? "bg-secondary font-semibold text-ink"
+                            : "text-muted-foreground hover:bg-secondary/50 hover:text-ink",
+                          collapsed && active && "bg-accent/15 text-accent ring-1 ring-accent/40",
                         )}
                       >
-                        <span
-                          className={cn(
-                            "absolute left-0 top-1/2 h-4 w-px -translate-y-1/2 bg-accent transition-opacity",
-                            active ? "opacity-100" : "opacity-0",
-                          )}
-                        />
-                        <span className="relative">
-                          <Icon
+                        {!collapsed && (
+                          <span
+                            aria-hidden
                             className={cn(
-                              "size-4 shrink-0",
-                              active ? "text-accent" : "text-white/40 group-hover:text-white/70",
+                              "absolute left-0 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-full bg-accent transition-opacity",
+                              active ? "opacity-100" : "opacity-0",
                             )}
                           />
-                          {collapsed && badge > 0 && (
-                            <span className="absolute -right-1.5 -top-1.5 size-2 rounded-full bg-accent ring-2 ring-primary" />
+                        )}
+                        <span
+                          className={cn(
+                            "grid shrink-0 place-items-center rounded-md transition-colors",
+                            !collapsed && "size-7",
+                            active
+                              ? "bg-accent/15 text-accent"
+                              : "text-muted-foreground/80 group-hover:text-ink",
                           )}
+                        >
+                          <Icon className="size-[1.05rem]" />
                         </span>
                         {!collapsed && <span className="truncate">{item.label}</span>}
-                        {!collapsed && badge > 0 && (
-                          <span className="ml-auto rounded-full bg-accent/15 px-1.5 py-0.5 text-[0.6rem] font-semibold text-accent">
-                            {badge > 99 ? "99+" : badge}
-                          </span>
-                        )}
+                        {badge > 0 &&
+                          (collapsed ? (
+                            <span className="absolute right-1 top-1 size-2 rounded-full bg-accent ring-2 ring-card" />
+                          ) : (
+                            <span className="ml-auto rounded-full bg-accent px-1.5 py-0.5 text-[0.56rem] font-bold leading-none text-primary">
+                              {badge > 99 ? "99+" : badge}
+                            </span>
+                          ))}
                       </Link>
                     </li>
                   );
@@ -138,21 +167,78 @@ function NavContent({
         })}
       </nav>
 
-      {collapsed ? (
-        <div className="border-t border-white/10 px-2 py-4">
-          <span
-            title={`${viewer.name} · ${viewer.role.name}`}
-            className="mx-auto grid size-9 place-items-center rounded-full bg-accent text-[0.65rem] font-semibold text-primary"
-          >
-            {initials(viewer.name)}
-          </span>
-        </div>
-      ) : (
-        <div className="border-t border-white/10 px-5 py-4">
-          <p className="truncate text-xs font-medium text-white/85">{viewer.name}</p>
-          <p className="mt-0.5 truncate text-[0.7rem] text-white/40">{viewer.role.name}</p>
-        </div>
-      )}
+      <div className={cn("shrink-0 border-t border-border/60", collapsed ? "px-2 py-3" : "p-3")}>
+        {collapsed ? (
+          <div className="flex flex-col items-center gap-1.5">
+            <Link
+              href="/admin/profile"
+              onClick={onNavigate}
+              title="Profile"
+              aria-label="Profile"
+              className={cn(
+                "grid size-10 place-items-center rounded-full transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50",
+                profileActive ? "ring-2 ring-accent" : "ring-2 ring-border hover:ring-accent/60",
+              )}
+            >
+              <AdminAvatar
+                name={viewer.name}
+                avatarUrl={viewer.avatarUrl}
+                className="size-full rounded-full bg-primary text-primary-foreground"
+              />
+            </Link>
+            <form action={logoutAction}>
+              <button
+                type="submit"
+                title="Log out"
+                aria-label="Log out"
+                className="grid size-9 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+              >
+                <LogOut className="size-4" />
+              </button>
+            </form>
+          </div>
+        ) : (
+          <div className="rounded-xl border border-border/70 bg-background/70 p-1.5">
+            <Link
+              href="/admin/profile"
+              onClick={onNavigate}
+              className={cn(
+                "flex min-w-0 items-center gap-2.5 rounded-lg px-1.5 py-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50",
+                profileActive ? "bg-secondary" : "hover:bg-secondary/60",
+              )}
+            >
+              <AdminAvatar
+                name={viewer.name}
+                avatarUrl={viewer.avatarUrl}
+                className="size-8 shrink-0 rounded-full bg-primary text-[0.62rem] font-semibold text-primary-foreground"
+              />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-xs font-semibold text-ink">{viewer.name}</span>
+                <span className="block truncate text-[0.6rem] uppercase tracking-[0.08em] text-muted-foreground">
+                  {viewer.role.name}
+                </span>
+              </span>
+            </Link>
+            <div className="mt-1 grid grid-cols-2 gap-1">
+              <Link
+                href="/admin/profile"
+                onClick={onNavigate}
+                className="flex items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-[0.66rem] font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+              >
+                <UserRound className="size-3.5" /> Profile
+              </Link>
+              <form action={logoutAction}>
+                <button
+                  type="submit"
+                  className="flex w-full items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-[0.66rem] font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+                >
+                  <LogOut className="size-3.5" /> Log out
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -175,8 +261,8 @@ export function AdminSidebar({
   return (
     <aside
       className={cn(
-        "fixed bottom-4 left-4 top-4 z-40 hidden overflow-hidden rounded-2xl bg-primary shadow-2xl shadow-primary/20 transition-[width] duration-300 lg:block",
-        collapsed ? "w-[84px]" : "w-[268px]",
+        "fixed bottom-4 left-4 top-4 z-40 hidden overflow-hidden rounded-2xl border border-border/80 bg-card text-foreground shadow-[0_24px_60px_-32px_rgba(23,43,53,0.45)] transition-[width] duration-300 lg:block dark:border-white/10 dark:shadow-[0_24px_60px_-28px_rgba(0,0,0,0.7)]",
+        collapsed ? "w-[76px]" : "w-[272px]",
       )}
     >
       <NavContent
@@ -211,7 +297,7 @@ export function AdminMobileNav({
       >
         <Menu className="size-5" />
       </SheetTrigger>
-      <SheetContent>
+      <SheetContent className="w-[300px] border-border bg-card p-0 text-foreground [&>button]:text-muted-foreground [&>button:hover]:bg-secondary [&>button:hover]:text-ink">
         <SheetTitle className="sr-only">Admin navigation</SheetTitle>
         <NavContent
           viewer={viewer}

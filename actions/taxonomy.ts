@@ -8,6 +8,7 @@ import { authorize } from "@/lib/auth/guards";
 import { checked, field, numberField, redirectWith } from "@/lib/form-helpers";
 import { slugify } from "@/lib/utils";
 import { logAudit } from "@/lib/audit";
+import { saveFormTranslations } from "@/lib/i18n/form-translations";
 import { TAXONOMY_KEYS, TAXONOMY_META as META, type TaxonomyEntity } from "@/lib/taxonomy";
 
 const entitySchema = z.enum(TAXONOMY_KEYS);
@@ -73,6 +74,10 @@ export async function saveTaxonomy(formData: FormData) {
   const entity = parseEntity(field(formData, "entity"));
   if (!entity) redirect("/admin?error=Unknown%20taxonomy%20type");
   const meta = META[entity];
+  const requestedReturnTo = field(formData, "returnTo");
+  const formPath = requestedReturnTo.startsWith(`/admin/taxonomy/${entity}/`)
+    ? requestedReturnTo
+    : meta.path;
 
   const gate = await authorize(meta.permission);
   if (gate.error || !gate.session) {
@@ -89,12 +94,12 @@ export async function saveTaxonomy(formData: FormData) {
   };
   const parsed = taxonomySchema.safeParse(raw);
   if (!parsed.success) {
-    redirect(redirectWith(meta.path, "error", parsed.error.issues[0]?.message || "Check the fields"));
+    redirect(redirectWith(formPath, "error", parsed.error.issues[0]?.message || "Check the fields"));
   }
 
   const name = parsed.data.name;
   const slug = slugify(parsed.data.slug || name);
-  if (!slug) redirect(redirectWith(meta.path, "error", "A valid slug is required"));
+  if (!slug) redirect(redirectWith(formPath, "error", "A valid slug is required"));
 
   const delegate = delegateFor(entity);
 
@@ -128,6 +133,8 @@ export async function saveTaxonomy(formData: FormData) {
     console.error(error);
     redirect(redirectWith(meta.path, "error", `The ${meta.label} could not be saved`));
   }
+
+  await saveFormTranslations(entity, savedId, formData, ["name", "description"]);
 
   await logAudit({
     userId: gate.session.user.id,

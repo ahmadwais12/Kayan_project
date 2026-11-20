@@ -2,8 +2,7 @@
 
 import { useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-
-const OPTIONS = [5, 10, 20, 50, 100] as const;
+import { ROWS_OPTIONS } from "@/lib/pagination";
 
 export function RowsPerPage({ value }: { value: number }) {
   const router = useRouter();
@@ -20,14 +19,15 @@ export function RowsPerPage({ value }: { value: number }) {
         onChange={(event) => {
           const next = new URLSearchParams(searchParams.toString());
           next.set("rows", event.target.value);
+          next.delete("page");
           startTransition(() => {
             router.push(`${pathname}?${next.toString()}`, { scroll: false });
           });
         }}
-        className="rounded bg-transparent text-xs font-semibold text-primary outline-none"
-        aria-label="Rows per table"
+        className="rounded bg-transparent text-xs font-semibold text-primary outline-none disabled:opacity-60"
+        aria-label="Rows per fetch"
       >
-        {OPTIONS.map((option) => (
+        {ROWS_OPTIONS.map((option) => (
           <option key={option} value={option}>
             {option}
           </option>

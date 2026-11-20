@@ -9,6 +9,7 @@ import { projectSchema } from "@/lib/validations";
 import { checked, field, jsonArray, numberField } from "@/lib/form-helpers";
 import { slugify, parseList } from "@/lib/utils";
 import { logAudit } from "@/lib/audit";
+import { saveFormTranslations } from "@/lib/i18n/form-translations";
 
 export type ProjectState = { error?: string };
 
@@ -177,6 +178,16 @@ export async function saveProject(
 
       return record;
     });
+
+    await saveFormTranslations("project", saved.id, formData, [
+      "title",
+      "location",
+      "description",
+      "challenges",
+      "solutions",
+      "architecturalDetails",
+      "constructionDetails",
+    ]);
 
     await logAudit({
       userId: gate.session.user.id,

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input, Label, NativeSelect, Textarea } from "@/components/ui/input";
 import { formatBytes, formatDateTime } from "@/lib/utils";
+import { telHref } from "@/lib/format";
 
 export type InquiryDetailProps = {
   kind: "contact" | "quote";
@@ -20,7 +21,7 @@ export type InquiryDetailProps = {
   createdAt: Date;
   ip: string | null;
   userAgent: string | null;
-  details: { label: string; value: string }[];
+  details: { label: string; value: string; ltr?: boolean }[];
   message: string;
   messageLabel: string;
   notes: { id: string; body: string; createdAt: Date; author: string | null }[];
@@ -56,7 +57,7 @@ export function InquiryDetail(props: InquiryDetailProps) {
                 {props.details.map((detail) => (
                   <div key={detail.label} className="rounded-md bg-secondary/50 px-3 py-2">
                     <dt className="text-[0.68rem] font-semibold uppercase tracking-[0.1em] text-muted-foreground">{detail.label}</dt>
-                    <dd className="mt-0.5 text-sm text-primary">{detail.value || "—"}</dd>
+                    <dd className={`mt-0.5 text-sm text-primary${detail.ltr ? " phone-ltr" : ""}`}>{detail.value || "—"}</dd>
                   </div>
                 ))}
               </dl>
@@ -73,7 +74,7 @@ export function InquiryDetail(props: InquiryDetailProps) {
               </Button>
               {props.phone && (
                 <Button asChild variant="outline" size="sm">
-                  <a href={`tel:${props.phone}`}>
+                  <a href={telHref(props.phone)}>
                     <Phone className="size-3.5" /> Call
                   </a>
                 </Button>
@@ -152,7 +153,7 @@ export function InquiryDetail(props: InquiryDetailProps) {
           <CardContent className="space-y-2 text-sm">
             <p className="font-medium text-primary">{props.name}</p>
             <p><a href={`mailto:${props.email}`} className="text-muted-foreground hover:text-primary hover:underline">{props.email}</a></p>
-            {props.phone && <p className="text-muted-foreground">{props.phone}</p>}
+            {props.phone && <p className="phone-ltr text-muted-foreground">{props.phone}</p>}
             <p className="pt-2 text-xs text-muted-foreground">Received {formatDateTime(props.createdAt)}</p>
             {props.ip && <p className="text-xs text-muted-foreground">IP {props.ip}</p>}
             {props.userAgent && <p className="line-clamp-2 text-xs text-muted-foreground">{props.userAgent}</p>}

@@ -6,7 +6,8 @@ import { SettingsTabs } from "@/components/admin/settings-tabs";
 import { SubmitButton, FieldHelp } from "@/components/admin/form-kit";
 import { saveFooterSettings } from "@/actions/settings";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label, Textarea } from "@/components/ui/input";
+import { LocalizedField } from "@/components/admin/localized-field";
+import { loadKeyedTranslations } from "@/lib/i18n/form-translations";
 
 export const dynamic = "force-dynamic";
 
@@ -16,9 +17,10 @@ export default async function FooterSettingsPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   await requirePermission("settings.manage");
-  const [rows, query] = await Promise.all([
-    prisma.footerSetting.findMany({ orderBy: { key: "asc" } }),
+  const rows = await prisma.footerSetting.findMany({ orderBy: { key: "asc" } });
+  const [query, translations] = await Promise.all([
     searchParams,
+    loadKeyedTranslations("footerSetting", rows.map((row) => row.key)),
   ]);
 
   return (
@@ -39,16 +41,18 @@ export default async function FooterSettingsPage({
               <p className="text-sm text-muted-foreground">No footer settings are available yet.</p>
             ) : (
               rows.map((row) => (
-                <div key={row.key}>
-                  <Label htmlFor={`footer-${row.key}`}>{labelFor(row.key)}</Label>
-                  <Textarea
-                    id={`footer-${row.key}`}
-                    name={`footer:${row.key}`}
-                    defaultValue={row.value}
-                    rows={row.value.length > 120 ? 4 : 2}
-                    maxLength={8000}
-                  />
-                </div>
+                <LocalizedField
+                  key={row.key}
+                  id={`footer-${row.key}`}
+                  name={`footer:${row.key}`}
+                  translationKey={row.key}
+                  label={labelFor(row.key)}
+                  defaultValue={row.value}
+                  translations={translations}
+                  multiline
+                  rows={row.value.length > 120 ? 4 : 2}
+                  maxLength={8000}
+                />
               ))
             )}
             <FieldHelp>

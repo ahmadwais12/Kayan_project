@@ -4,10 +4,12 @@ import { useState, type CSSProperties, type ReactNode } from "react";
 import { AdminSidebar } from "@/components/admin/sidebar";
 import { AdminHeader } from "@/components/admin/header";
 import type { NotificationItem } from "@/lib/notifications";
+import type { Locale } from "@/lib/i18n/config";
 
 type Viewer = {
   name: string;
   email: string;
+  avatarUrl?: string | null;
   role: { slug: string; name: string; permissions: string[] };
 };
 
@@ -18,6 +20,7 @@ export function AdminShell({
   notifications,
   unreadCount,
   initialCollapsed,
+  locale,
   children,
 }: {
   viewer: Viewer;
@@ -26,6 +29,7 @@ export function AdminShell({
   notifications: NotificationItem[];
   unreadCount: number;
   initialCollapsed: boolean;
+  locale: Locale;
   children: ReactNode;
 }) {
   const [collapsed, setCollapsed] = useState(initialCollapsed);
@@ -48,7 +52,7 @@ export function AdminShell({
       />
       <div
         className="min-w-0 transition-[padding] duration-300 lg:pl-[var(--admin-shell-pad)]"
-        style={{ "--admin-shell-pad": collapsed ? "116px" : "300px" } as CSSProperties}
+        style={{ "--admin-shell-pad": collapsed ? "108px" : "304px" } as CSSProperties}
       >
         <AdminHeader
           viewer={viewer}
@@ -56,6 +60,7 @@ export function AdminShell({
           logoUrl={logoUrl}
           notifications={notifications}
           unreadCount={unreadCount}
+          locale={locale}
         />
         <main className="mx-auto w-full max-w-[1500px] px-4 pb-8 pt-2 sm:px-6 lg:px-8">
           {children}

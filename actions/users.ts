@@ -29,6 +29,7 @@ const userSchema = z.object({
   email: z.email("Enter a valid email address").max(200),
   roleId: z.string().trim().min(1, "Select a role"),
   isActive: z.boolean(),
+  avatarUrl: z.string().trim().max(500).optional().default(""),
   password: z.string().max(200).optional().default(""),
 });
 
@@ -42,6 +43,7 @@ export async function saveAdminUser(formData: FormData) {
     email: field(formData, "email").toLowerCase(),
     roleId: field(formData, "roleId"),
     isActive: checked(formData, "isActive"),
+    avatarUrl: field(formData, "avatarUrl"),
     password: field(formData, "password"),
   });
   if (!parsed.success) back(id ? `/admin/users/${id}` : "/admin/users/new", "error", parsed.error.issues[0]?.message);
@@ -62,6 +64,7 @@ export async function saveAdminUser(formData: FormData) {
         email: parsed.data.email,
         roleId: role.id,
         isActive: parsed.data.isActive,
+        avatarUrl: parsed.data.avatarUrl || null,
         passwordHash: await hashPassword(parsed.data.password),
       },
     });
@@ -124,6 +127,7 @@ export async function saveAdminUser(formData: FormData) {
       email: parsed.data.email,
       roleId: role.id,
       isActive: parsed.data.isActive,
+      avatarUrl: parsed.data.avatarUrl || null,
       ...(parsed.data.password
         ? { passwordHash: await hashPassword(parsed.data.password) }
         : {}),

@@ -8,6 +8,7 @@ import { AdminFlash, flashFromQuery } from "@/components/admin/flash";
 import { ProjectForm } from "@/components/admin/project-form";
 import { Button } from "@/components/ui/button";
 import { formatDateTime } from "@/lib/utils";
+import { loadFormTranslations } from "@/lib/i18n/form-translations";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +23,7 @@ export default async function EditProjectPage({
   const { id } = await params;
   const query = await searchParams;
 
-  const [project, categories, media] = await Promise.all([
+  const [project, categories, media, translations] = await Promise.all([
     prisma.project.findFirst({
       where: { id, deletedAt: null },
       include: {
@@ -34,6 +35,15 @@ export default async function EditProjectPage({
     }),
     prisma.projectCategory.findMany({ orderBy: { sortOrder: "asc" }, select: { id: true, name: true } }),
     prisma.media.findMany({ orderBy: { createdAt: "desc" }, take: 100, select: { id: true, url: true, alt: true } }),
+    loadFormTranslations("project", id, [
+      "title",
+      "location",
+      "description",
+      "challenges",
+      "solutions",
+      "architecturalDetails",
+      "constructionDetails",
+    ]),
   ]);
 
   if (!project) notFound();
@@ -67,6 +77,7 @@ export default async function EditProjectPage({
       <ProjectForm
         categories={categories}
         library={media}
+        translations={translations}
         values={{
           id: project.id,
           title: project.title,

@@ -70,7 +70,7 @@ The public site adds presentation that needs no configuration:
 
 - Statistics animate up to their stored value when scrolled into view. If a statistic is stored as a placeholder dash, it stays a dash until you enter a real value.
 - Testimonials published in **Testimonials** become an autoplaying carousel on the home page. The optional client photo is used as the avatar.
-- **Projects** can be viewed as a grid or a masonry layout; the visitor's choice is remembered in their browser.
+- **Projects** can be viewed as a table or a grid; the visitor's choice is remembered in their browser, with Table selected by default.
 - Gallery images open in a lightbox with zoom (click the image, or use `+`, `-`, and `0`).
 - The About page shows **mission** and **vision**, the active values and process, the timeline, the first four team members, and up to four **Why Choose Us** items. Keep those records current to control the page.
 

@@ -4,6 +4,7 @@ import { requirePermission } from "@/lib/auth/guards";
 import { PageHeader } from "@/components/admin/page-header";
 import { AdminFlash, flashFromQuery } from "@/components/admin/flash";
 import { SubmitButton } from "@/components/admin/form-kit";
+import { AvatarInput } from "@/components/admin/avatar-input";
 import { saveAdminUser } from "@/actions/users";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,6 +34,10 @@ export default async function NewAdminUserPage({
         <Card>
           <CardHeader><CardTitle>Account details</CardTitle></CardHeader>
           <CardContent className="space-y-4">
+            <AvatarInput
+              name="avatarUrl"
+              help="Optional. Upload a square image (JPG, PNG, WebP or AVIF, up to 8 MB)."
+            />
             <div>
               <Label htmlFor="name">Full name</Label>
               <Input id="name" name="name" required maxLength={120} autoComplete="name" />
@@ -72,7 +77,7 @@ export default async function NewAdminUserPage({
                 <span className="block text-sm">Active</span>
                 <span className="block text-xs text-muted-foreground">Inactive accounts cannot sign in.</span>
               </span>
-              <input type="checkbox" name="isActive" defaultChecked className="size-4 accent-[#172B35]" />
+              <input type="checkbox" name="isActive" defaultChecked className="size-4 accent-accent" />
             </label>
           </CardContent>
         </Card>

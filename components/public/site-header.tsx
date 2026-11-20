@@ -9,6 +9,7 @@ import { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from "@/com
 import { LanguageSwitcher } from "@/components/public/language-switcher";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { getDictionary } from "@/lib/i18n/dictionary";
+import { telHref } from "@/lib/format";
 import type { Locale, Theme } from "@/lib/i18n/config";
 import { cn } from "@/lib/utils";
 
@@ -76,13 +77,13 @@ function NavLink({
   }
 
   return (
-    <div className="group relative">
+    <div className="group relative w-max shrink-0">
       <Link
         href={item.url}
         target={external ? "_blank" : undefined}
         rel={external ? "noreferrer" : undefined}
         className={cn(
-          "relative flex items-center gap-1 py-1.5 text-[0.78rem] font-medium tracking-[0.04em] transition-colors",
+          "relative flex shrink-0 items-center gap-1 whitespace-nowrap py-1.5 text-[0.78rem] font-medium tracking-[0.04em] transition-colors",
           active ? "text-primary" : "text-foreground/70 hover:text-primary",
         )}
       >
@@ -155,16 +156,19 @@ export function SiteHeader({
             : "border-transparent bg-background",
         )}
       >
-        <div className="container-x flex h-[72px] items-center justify-between gap-6">
-          <SiteLogo name={siteName} logoUrl={logoUrl} hideTagline />
+        <div className="container-x flex h-[72px] items-center justify-between gap-3 sm:gap-4">
+          <SiteLogo name={siteName} logoUrl={logoUrl} hideTagline className="shrink-0" />
 
-          <nav className="hidden items-center gap-6 lg:flex xl:gap-8" aria-label="Main navigation">
+          <nav
+            className="hidden min-w-0 flex-1 items-center justify-start gap-4 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden 2xl:flex 2xl:gap-5"
+            aria-label="Main navigation"
+          >
             {items.map((item) => (
               <NavLink key={item.id} item={item} pathname={pathname} />
             ))}
           </nav>
 
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
             <LanguageSwitcher locale={locale} />
             <ThemeToggle
               theme={theme}
@@ -172,19 +176,19 @@ export function SiteHeader({
             />
             <Link
               href="/admin/login"
-              className="hidden items-center gap-2 border border-primary/20 px-4 py-3 text-[0.72rem] font-semibold tracking-[0.12em] text-primary uppercase transition-colors hover:border-primary hover:bg-primary hover:text-white xl:flex"
+              className="hidden items-center gap-2 border border-primary/20 px-4 py-3 text-[0.72rem] font-semibold tracking-[0.12em] text-primary uppercase transition-colors hover:border-primary hover:bg-primary hover:text-white 2xl:flex"
             >
               <LogIn className="size-3.5" /> {t.login}
             </Link>
             <Link
               href="/quote"
-              className="btn-shine hidden items-center gap-2 bg-primary px-5 py-3 text-[0.72rem] font-semibold tracking-[0.12em] text-white uppercase transition-colors hover:bg-accent hover:text-primary md:inline-flex"
+              className="btn-shine hidden items-center gap-2 bg-primary px-4 py-3 text-[0.72rem] font-semibold tracking-[0.12em] text-white uppercase transition-colors hover:bg-accent hover:text-primary lg:inline-flex 2xl:px-5"
             >
               {t.startProject} <ArrowRight className="size-3.5 rtl:rotate-180" />
             </Link>
             <Sheet open={open} onOpenChange={setOpen}>
               <SheetTrigger
-                className="inline-flex size-10 items-center justify-center border border-primary/20 text-primary lg:hidden"
+                className="inline-flex size-10 items-center justify-center border border-primary/20 text-primary 2xl:hidden"
                 aria-label={t.openMenu}
               >
                 <Menu className="size-5" />
@@ -231,8 +235,8 @@ export function SiteHeader({
                           </a>
                         )}
                         {phone && (
-                          <a href={`tel:${phone.replace(/\s+/g, "")}`} className="block hover:text-white">
-                            {phone}
+                          <a href={telHref(phone)} className="block hover:text-white">
+                            <span dir="ltr" className="phone-ltr">{phone}</span>
                           </a>
                         )}
                       </div>

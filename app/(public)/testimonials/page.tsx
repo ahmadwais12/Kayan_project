@@ -13,9 +13,13 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata() {
   const locale = await getLocale();
   const t = getDictionary(locale);
+  const section = await prisma.homepageSection.findUnique({ where: { key: "testimonials" } });
+  const [localized] = section
+    ? await withTranslations("homepage", [section], locale, ["title", "subtitle", "description"])
+    : [];
   return buildMetadata({
-    title: t.testimonialsTitle,
-    description: t.testimonialsDesc,
+    title: localized?.title || t.testimonialsTitle,
+    description: localized?.description || t.testimonialsDesc,
     path: "/testimonials",
   });
 }

@@ -9,7 +9,6 @@ import {
   Image,
   Inbox,
   LayoutDashboard,
-  Languages,
   Layers,
   Mail,
   MessageSquare,
@@ -24,10 +23,10 @@ import {
   Share2,
   Shield,
   Tag,
-  Upload,
-  User,
+  Trophy,
   UserPlus,
   Users,
+  Video,
 } from "lucide-react";
 import type { PermissionKey } from "@/lib/auth/permissions";
 
@@ -66,17 +65,8 @@ export const ADMIN_NAV: AdminNavGroup[] = [
     ],
   },
   {
-    label: "User Management",
-    items: [
-      { label: "User Management", href: "/admin/users", icon: Users, permission: "users.manage" },
-      { label: "Add New User", href: "/admin/users/new", icon: UserPlus, permission: "users.manage" },
-      { label: "Roles & Permissions", href: "/admin/users/roles", icon: Shield, permission: "users.manage" },
-    ],
-  },
-  {
     label: "Website Content",
     items: [
-      { label: "Translations", href: "/admin/translations", icon: Languages, permission: "content.manage" },
       { label: "Home Page", href: "/admin/homepage", icon: Home, permission: "content.manage" },
       { label: "About Page", href: "/admin/about", icon: Building2, permission: "content.manage" },
       { label: "Services", href: "/admin/services", icon: Layers, permission: "services.manage" },
@@ -90,6 +80,8 @@ export const ADMIN_NAV: AdminNavGroup[] = [
       { label: "Blog Categories", href: "/admin/blog/categories", icon: Tag, permission: "blog.manage" },
       { label: "Blog Tags", href: "/admin/blog/tags", icon: Tag, permission: "blog.manage" },
       { label: "Testimonials", href: "/admin/testimonials", icon: MessageSquare, permission: "content.manage" },
+      { label: "Awards & Recognition", href: "/admin/awards", icon: Trophy, permission: "content.manage" },
+      { label: "Project Videos", href: "/admin/videos", icon: Video, permission: "content.manage" },
       { label: "FAQs", href: "/admin/faqs", icon: HelpCircle, permission: "content.manage" },
       { label: "Company Timeline", href: "/admin/timeline", icon: Milestone, permission: "content.manage" },
       { label: "Process & Values", href: "/admin/content", icon: Layers, permission: "content.manage" },
@@ -104,13 +96,6 @@ export const ADMIN_NAV: AdminNavGroup[] = [
     ],
   },
   {
-    label: "Media",
-    items: [
-      { label: "Media Library", href: "/admin/media", icon: Image, permission: "media.manage" },
-      { label: "Upload Media", href: "/admin/media/upload", icon: Upload, permission: "media.manage" },
-    ],
-  },
-  {
     label: "Website Configuration",
     items: [
       { label: "General Settings", href: "/admin/settings", icon: Settings, permission: "settings.manage" },
@@ -121,13 +106,14 @@ export const ADMIN_NAV: AdminNavGroup[] = [
       { label: "Contact Information", href: "/admin/settings/contact", icon: Phone, permission: "settings.manage" },
       { label: "SEO Settings", href: "/admin/settings/seo", icon: Search, permission: "settings.manage" },
       { label: "Redirects", href: "/admin/settings/redirects", icon: Route, permission: "settings.manage" },
-      { label: "Theme Settings", href: "/admin/settings/theme", icon: Palette, permission: "settings.manage" },
     ],
   },
   {
-    label: "Administration",
+    label: "User Management",
     items: [
-      { label: "Profile", href: "/admin/profile", icon: User },
+      { label: "User Management", href: "/admin/users", icon: Users, permission: "users.manage" },
+      { label: "Add New User", href: "/admin/users/new", icon: UserPlus, permission: "users.manage" },
+      { label: "Roles & Permissions", href: "/admin/users/roles", icon: Shield, permission: "users.manage" },
     ],
   },
 ];

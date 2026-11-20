@@ -5,11 +5,63 @@ import { buildMetadata } from "@/lib/seo";
 import { getLocale } from "@/lib/i18n/server";
 import { getLocalizedSettings, withTranslations } from "@/lib/i18n/content";
 import { getDictionary } from "@/lib/i18n/dictionary";
+import { telHref, toE164 } from "@/lib/format";
 import { PageHero } from "@/components/public/page-hero";
 import { SocialIcon } from "@/components/public/social-icon";
 import { ContactForm } from "./contact-form";
+import { LocationMapDialog } from "@/components/public/location-map-dialog";
 
 export const dynamic = "force-dynamic";
+
+function getMapEmbedUrl(rawUrl: string, address: string) {
+  const raw = rawUrl.trim();
+
+  if (raw) {
+    try {
+      const url = new URL(raw);
+      const host = url.hostname.toLowerCase();
+      const isGoogleMaps =
+        (host === "google.com" || host.endsWith(".google.com")) &&
+        url.pathname.startsWith("/maps");
+
+      if (url.protocol === "https:" && isGoogleMaps) {
+        if (url.pathname.startsWith("/maps/embed")) return url.toString();
+
+        // A regular Maps share/place URL cannot be framed. Convert it to
+        // Google's supported query embed endpoint while retaining its place.
+        const mapData = decodeURIComponent(url.pathname);
+        const pin = mapData.match(/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/);
+        const viewport = url.pathname.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?),(\d+(?:\.\d+)?)z/);
+        const coordinates = pin || viewport;
+        if (coordinates) {
+          const embed = new URL("https://www.google.com/maps");
+          embed.searchParams.set("q", `${coordinates[1]},${coordinates[2]}`);
+          embed.searchParams.set("z", viewport?.[3] ? String(Math.round(Number(viewport[3]))) : "18");
+          embed.searchParams.set("output", "embed");
+          return embed.toString();
+        }
+
+        const place = decodeURIComponent(url.pathname.replace(/^\/maps\/?(?:place\/)?/, "").replaceAll("+", " "));
+        const query = url.searchParams.get("q") || url.searchParams.get("query") || place;
+        if (query || url.searchParams.has("cid")) {
+          const embed = new URL("https://www.google.com/maps");
+          if (query) embed.searchParams.set("q", query);
+          if (url.searchParams.has("cid")) embed.searchParams.set("cid", url.searchParams.get("cid")!);
+          embed.searchParams.set("output", "embed");
+          return embed.toString();
+        }
+      }
+    } catch {
+      // Fall through to the saved address when the configured URL is invalid.
+    }
+  }
+
+  if (!address.trim()) return null;
+  const embed = new URL("https://www.google.com/maps");
+  embed.searchParams.set("q", address.trim());
+  embed.searchParams.set("output", "embed");
+  return embed.toString();
+}
 
 export async function generateMetadata() {
   const locale = await getLocale();
@@ -41,25 +93,26 @@ export default async function ContactPage() {
   const intro = introRows[0] || null;
 
   const details = [
-    settings.address && { icon: MapPin, label: t.studioLabel, value: settings.address, href: undefined },
-    settings.email && { icon: Mail, label: t.emailLabel, value: settings.email, href: `mailto:${settings.email}` },
+    settings.address && { icon: MapPin, label: t.studioLabel, value: settings.address, href: undefined, ltr: false },
+    settings.email && { icon: Mail, label: t.emailLabel, value: settings.email, href: `mailto:${settings.email}`, ltr: false },
     settings.phone && {
       icon: Phone,
       label: t.phoneLabel,
       value: settings.phone,
-      href: `tel:${settings.phone.replace(/\s+/g, "")}`,
+      href: telHref(settings.phone),
+      ltr: true,
     },
     settings.whatsapp && {
       icon: MessageCircle,
       label: t.whatsappLabel,
       value: settings.whatsapp,
-      href: `https://wa.me/${settings.whatsapp.replace(/[^\d]/g, "")}`,
+      href: `https://wa.me/${toE164(settings.whatsapp).replace("+", "")}`,
+      ltr: true,
     },
-    settings.workingHours && { icon: Clock, label: t.hoursLabel, value: settings.workingHours, href: undefined },
-  ].filter(Boolean) as { icon: typeof Mail; label: string; value: string; href: string | undefined }[];
+    settings.workingHours && { icon: Clock, label: t.hoursLabel, value: settings.workingHours, href: undefined, ltr: false },
+  ].filter(Boolean) as { icon: typeof Mail; label: string; value: string; href: string | undefined; ltr: boolean }[];
 
-  const mapUrl =
-    settings.mapEmbedUrl && /^https?:\/\//i.test(settings.mapEmbedUrl) ? settings.mapEmbedUrl : null;
+  const mapUrl = getMapEmbedUrl(settings.mapEmbedUrl, settings.address);
 
   return (
     <>
@@ -97,12 +150,12 @@ export default async function ContactPage() {
                           href={item.href}
                           target={item.href.startsWith("http") ? "_blank" : undefined}
                           rel={item.href.startsWith("http") ? "noreferrer" : undefined}
-                          className="mt-0.5 block whitespace-pre-line text-sm text-primary hover:text-accent"
+                          className={`mt-0.5 block whitespace-pre-line text-sm text-primary hover:text-accent${item.ltr ? " phone-ltr" : ""}`}
                         >
                           {item.value}
                         </a>
                       ) : (
-                        <p className="mt-0.5 whitespace-pre-line text-sm text-primary">{item.value}</p>
+                        <p className={`mt-0.5 whitespace-pre-line text-sm text-primary${item.ltr ? " phone-ltr" : ""}`}>{item.value}</p>
                       )}
                     </div>
                   </li>
@@ -153,17 +206,7 @@ export default async function ContactPage() {
           </div>
         </div>
 
-        {mapUrl && (
-          <div className="mt-14 overflow-hidden border border-border/80">
-            <iframe
-              src={mapUrl}
-              title={t.mapTitle}
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-              className="h-[380px] w-full"
-            />
-          </div>
-        )}
+        {mapUrl && <LocationMapDialog mapUrl={mapUrl} title={t.mapTitle} />}
       </section>
     </>
   );

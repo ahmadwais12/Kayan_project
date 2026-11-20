@@ -1,18 +1,15 @@
 import Link from "next/link";
-import { ArrowDown, ArrowUp, ExternalLink, Pencil, Share2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ExternalLink, Pencil, Plus, Share2 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/auth/guards";
 import { PageHeader } from "@/components/admin/page-header";
 import { AdminFlash, flashFromQuery } from "@/components/admin/flash";
 import { DeleteButton } from "@/components/admin/delete-button";
-import { SubmitButton } from "@/components/admin/form-kit";
-import { PlatformSelect } from "@/components/admin/platform-select";
+import { ViewButton } from "@/components/admin/view-button";
 import { SocialIcon } from "@/components/public/social-icon";
-import { deleteSocialLink, reorderSocialLink, saveSocialLink } from "@/actions/settings";
-import { MAX_SOCIAL_LINKS, SOCIAL_PLATFORMS, socialPlatformLabel } from "@/lib/social-platforms";
+import { deleteSocialLink, reorderSocialLink } from "@/actions/settings";
+import { MAX_SOCIAL_LINKS, socialPlatformLabel } from "@/lib/social-platforms";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input, Label } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
@@ -29,14 +26,8 @@ export default async function SocialLinksPage({
   const links = await prisma.socialLink.findMany({
     orderBy: [{ sortOrder: "asc" }, { platform: "asc" }],
   });
-  const editing = query.edit ? links.find((link) => link.id === query.edit) : undefined;
   const activeCount = links.filter((link) => link.isActive).length;
   const emptySlots = Math.max(MAX_SOCIAL_LINKS - links.length, 0);
-  const platformOptions = SOCIAL_PLATFORMS.some((item) => item.value === editing?.platform)
-    ? SOCIAL_PLATFORMS
-    : editing
-      ? [...SOCIAL_PLATFORMS, { value: editing.platform, label: editing.platform }]
-      : SOCIAL_PLATFORMS;
 
   return (
     <div>
@@ -45,107 +36,28 @@ export default async function SocialLinksPage({
         description={`Up to ${MAX_SOCIAL_LINKS} social media or app icons. Add a link, choose an icon and arrange the display order used across the website.`}
         breadcrumb={[{ label: "Social Links" }]}
         actions={
-          <div className="flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-xs text-muted-foreground">
-            <Share2 className="size-3.5 text-accent" />
-            <span className="font-medium text-primary">{links.length}</span> / {MAX_SOCIAL_LINKS} slots used
-            <span className="text-border">|</span>
-            {activeCount} visible
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-xs text-muted-foreground">
+              <Share2 className="size-3.5 text-accent" />
+              <span className="font-medium text-primary">{links.length}</span> / {MAX_SOCIAL_LINKS} slots used
+              <span className="text-border">|</span>
+              {activeCount} visible
+            </div>
+            {links.length < MAX_SOCIAL_LINKS ? (
+              <Button asChild>
+                <Link href="/admin/social/new"><Plus className="size-4" /> Add social link</Link>
+              </Button>
+            ) : (
+              <Button disabled title={`Maximum of ${MAX_SOCIAL_LINKS} social links reached`}>
+                <Plus className="size-4" /> Add social link
+              </Button>
+            )}
           </div>
         }
       />
       <AdminFlash {...flashFromQuery(query)} />
 
-      <div className="grid items-start gap-5 xl:grid-cols-[360px_1fr]">
-        <Card className="xl:sticky xl:top-24">
-          <CardHeader>
-            <CardTitle>{editing ? "Edit link" : "Add a link"}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form action={saveSocialLink} className="space-y-4">
-              <input type="hidden" name="id" value={editing?.id || ""} />
-              <input type="hidden" name="returnTo" value="/admin/social" />
-              <input type="hidden" name="icon" value={editing?.icon || ""} />
-              <input
-                type="hidden"
-                name="sortOrder"
-                value={editing?.sortOrder ?? (links.length + 1) * 10}
-              />
-
-              <div>
-                <Label htmlFor="platform">Platform or app</Label>
-                <PlatformSelect
-                  id="platform"
-                  name="platform"
-                  defaultValue={editing?.platform || "Instagram"}
-                  options={platformOptions.map((item) => ({ value: item.value, label: item.label }))}
-                />
-                <p className="mt-1.5 text-xs text-muted-foreground">
-                  Search the list and the matching icon is shown in the website footer.
-                </p>
-              </div>
-
-              <div>
-                <Label htmlFor="url">Destination link</Label>
-                <Input
-                  id="url"
-                  name="url"
-                  type="text"
-                  inputMode="url"
-                  defaultValue={editing?.url || ""}
-                  required
-                  maxLength={500}
-                  placeholder="https://instagram.com/yourstudio"
-                />
-                <p className="mt-1.5 text-xs text-muted-foreground">
-                  Use a full URL, or a mailto: / tel: link for contact icons.
-                </p>
-              </div>
-
-              <div>
-                <Label htmlFor="label">Accessible label</Label>
-                <Input
-                  id="label"
-                  name="label"
-                  defaultValue={editing?.label || ""}
-                  maxLength={120}
-                  placeholder="Kayan Land on Instagram"
-                />
-                <p className="mt-1.5 text-xs text-muted-foreground">
-                  Read by screen readers. Defaults to the platform name.
-                </p>
-              </div>
-
-              <label className="flex items-center justify-between gap-3 rounded-md border border-border/70 px-3 py-2.5">
-                <span>
-                  <span className="block text-sm text-primary">Visible on website</span>
-                  <span className="block text-xs text-muted-foreground">Hide without deleting the link.</span>
-                </span>
-                <input
-                  type="checkbox"
-                  name="isActive"
-                  defaultChecked={editing?.isActive ?? true}
-                  className="size-4 accent-[#172B35]"
-                />
-              </label>
-
-              <div className="flex items-center gap-2 pt-1">
-                <SubmitButton>{editing ? "Save link" : "Add link"}</SubmitButton>
-                {editing && (
-                  <Button asChild variant="outline">
-                    <Link href="/admin/social">Cancel</Link>
-                  </Button>
-                )}
-              </div>
-              {!editing && links.length >= MAX_SOCIAL_LINKS && (
-                <p className="text-xs text-destructive">
-                  All {MAX_SOCIAL_LINKS} slots are used. Remove a link before adding another.
-                </p>
-              )}
-            </form>
-          </CardContent>
-        </Card>
-
-        <div>
+      <div>
           <div className="overflow-hidden rounded-xl border border-border/80 bg-card">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/70 px-5 py-4">
               <div>
@@ -181,7 +93,7 @@ export default async function SocialLinksPage({
                       </span>
                       <p className="mt-3 text-sm font-medium text-primary">No social links yet</p>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        Add your first link on the left. It will appear in the website footer immediately.
+                        Use “Add social link” above to create your first link. It will appear in the website footer immediately.
                       </p>
                     </TableCell>
                   </TableRow>
@@ -269,9 +181,10 @@ export default async function SocialLinksPage({
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center justify-end gap-0.5">
+                          <ViewButton href={`/admin/records/social/${link.id}`} name={socialPlatformLabel(link.platform)} />
                           <Button asChild variant="ghost" size="icon" className="size-7">
                             <Link
-                              href={`/admin/social?edit=${link.id}`}
+                              href={`/admin/social/${link.id}/edit`}
                               title="Edit"
                               aria-label={`Edit ${link.platform}`}
                             >
@@ -301,7 +214,6 @@ export default async function SocialLinksPage({
               <span>Footer icons follow this table from top to bottom.</span>
             </div>
           </div>
-        </div>
       </div>
     </div>
   );

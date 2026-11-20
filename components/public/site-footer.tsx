@@ -4,6 +4,7 @@ import { SiteLogo } from "@/components/site-logo";
 import { NewsletterForm } from "@/components/public/newsletter-form";
 import { SocialIcon } from "@/components/public/social-icon";
 import { getDictionary } from "@/lib/i18n/dictionary";
+import { telHref } from "@/lib/format";
 import type { Locale } from "@/lib/i18n/config";
 
 type FooterLink = { id: string; label: string; url: string; openInNewTab: boolean };
@@ -120,8 +121,8 @@ export function SiteFooter({
             )}
             {settings.phone && (
               <li>
-                <a href={`tel:${settings.phone.replace(/\s+/g, "")}`} className="flex items-center gap-2.5 hover:text-white">
-                  <Phone className="size-3.5 shrink-0 text-white/35" /> {settings.phone}
+                <a href={telHref(settings.phone)} className="flex items-center gap-2.5 hover:text-white">
+                  <Phone className="size-3.5 shrink-0 text-white/35" /> <span dir="ltr" className="phone-ltr">{settings.phone}</span>
                 </a>
               </li>
             )}

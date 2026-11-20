@@ -8,6 +8,7 @@ import { AdminFlash, flashFromQuery } from "@/components/admin/flash";
 import { InquiryDetail } from "@/components/admin/inquiry-detail";
 import { Button } from "@/components/ui/button";
 import { formatDate, toDateTimeInput } from "@/lib/utils";
+import { formatPrice } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -72,7 +73,7 @@ export default async function QuoteRequestDetailPage({
         details={[
           { label: "Project type", value: request.projectType },
           { label: "Location", value: request.location },
-          { label: "Budget", value: request.budget || "" },
+          { label: "Budget", value: formatPrice(request.budget), ltr: true },
           { label: "Preferred start", value: formatDate(request.startDate) },
         ]}
         message={request.description}

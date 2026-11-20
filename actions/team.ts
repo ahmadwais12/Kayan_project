@@ -7,6 +7,7 @@ import { authorize } from "@/lib/auth/guards";
 import { teamSchema } from "@/lib/validations";
 import { checked, field, numberField } from "@/lib/form-helpers";
 import { logAudit } from "@/lib/audit";
+import { saveFormTranslations } from "@/lib/i18n/form-translations";
 
 export type TeamState = { error?: string };
 
@@ -76,6 +77,8 @@ export async function saveTeamMember(
     console.error(error);
     return { error: "The team member could not be saved. Please try again." };
   }
+
+  await saveFormTranslations("teamMember", saved.id, formData, ["jobTitle", "bio", "skills", "education", "experience"]);
 
   await logAudit({
     userId: gate.session.user.id,

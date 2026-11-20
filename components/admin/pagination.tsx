@@ -1,49 +1,61 @@
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { RowsPerPage } from "@/components/admin/rows-per-page";
 import { cn } from "@/lib/utils";
 
-export function Pagination({
+export function TableFooter({
   page,
-  totalPages,
+  pageSize,
+  total,
   basePath,
   params = {},
+  noun = "records",
 }: {
   page: number;
-  totalPages: number;
+  pageSize: number;
+  total: number;
   basePath: string;
   params?: Record<string, string | undefined>;
+  noun?: string;
 }) {
-  if (totalPages <= 1) return null;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const from = total === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const to = Math.min(total, currentPage * pageSize);
 
   function href(target: number) {
     const search = new URLSearchParams();
     for (const [key, value] of Object.entries(params)) {
       if (value) search.set(key, value);
     }
+    search.set("rows", String(pageSize));
     if (target > 1) search.set("page", String(target));
-    const query = search.toString();
-    return query ? `${basePath}?${query}` : basePath;
+    return `${basePath}?${search.toString()}`;
   }
 
   const pages = Array.from({ length: totalPages }, (_, index) => index + 1).filter(
-    (item) =>
-      item === 1 ||
-      item === totalPages ||
-      Math.abs(item - page) <= 1,
+    (item) => item === 1 || item === totalPages || Math.abs(item - currentPage) <= 1,
   );
 
   return (
-    <nav className="flex items-center justify-between gap-3 border-t border-border/70 px-4 py-3">
-      <p className="text-xs text-muted-foreground">
-        Page {page} of {totalPages}
-      </p>
-      <div className="flex items-center gap-1">
+    <div className="flex flex-col gap-3 border-t border-border/70 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-wrap items-center gap-3">
+        <RowsPerPage value={pageSize} />
+        <p className="text-xs text-muted-foreground">
+          {total === 0
+            ? `No ${noun}`
+            : `Showing ${from}–${to} of ${total} ${noun}`}
+        </p>
+      </div>
+
+      <nav aria-label="Pagination" className="flex items-center gap-1">
         <Link
-          href={href(Math.max(1, page - 1))}
-          aria-disabled={page === 1}
+          href={href(Math.max(1, currentPage - 1))}
+          aria-disabled={currentPage === 1}
+          aria-label="Previous page"
           className={cn(
             "inline-flex size-8 items-center justify-center rounded border border-border text-muted-foreground",
-            page === 1 && "pointer-events-none opacity-40",
+            currentPage === 1 && "pointer-events-none opacity-40",
           )}
         >
           <ChevronLeft className="size-4" />
@@ -57,9 +69,10 @@ export function Pagination({
               )}
               <Link
                 href={href(item)}
+                aria-current={item === currentPage ? "page" : undefined}
                 className={cn(
                   "inline-flex size-8 items-center justify-center rounded border text-xs font-medium",
-                  item === page
+                  item === currentPage
                     ? "border-primary bg-primary text-white"
                     : "border-border text-muted-foreground hover:border-primary/30 hover:text-primary",
                 )}
@@ -70,16 +83,17 @@ export function Pagination({
           );
         })}
         <Link
-          href={href(Math.min(totalPages, page + 1))}
-          aria-disabled={page === totalPages}
+          href={href(Math.min(totalPages, currentPage + 1))}
+          aria-disabled={currentPage === totalPages}
+          aria-label="Next page"
           className={cn(
             "inline-flex size-8 items-center justify-center rounded border border-border text-muted-foreground",
-            page === totalPages && "pointer-events-none opacity-40",
+            currentPage === totalPages && "pointer-events-none opacity-40",
           )}
         >
           <ChevronRight className="size-4" />
         </Link>
-      </div>
-    </nav>
+      </nav>
+    </div>
   );
 }

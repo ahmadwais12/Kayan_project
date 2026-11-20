@@ -10,7 +10,6 @@ const TABS = [
   { label: "Social", href: "/admin/settings/social" },
   { label: "SEO", href: "/admin/settings/seo" },
   { label: "Redirects", href: "/admin/settings/redirects" },
-  { label: "Theme", href: "/admin/settings/theme" },
 ];
 
 export function SettingsTabs({ active }: { active: string }) {

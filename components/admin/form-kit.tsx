@@ -3,6 +3,8 @@
 import { useFormStatus } from "react-dom";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useEffect } from "react";
+import { toast } from "sonner";
 
 export function SubmitButton({
   children,
@@ -25,19 +27,11 @@ export function SubmitButton({
 }
 
 export function FormFeedback({ error, success }: { error?: string; success?: string }) {
-  if (!error && !success) return null;
-  return (
-    <div
-      role="alert"
-      className={
-        error
-          ? "rounded-md border border-destructive/25 bg-destructive/8 px-3.5 py-2.5 text-sm text-destructive"
-          : "rounded-md border border-emerald-200 bg-emerald-50 px-3.5 py-2.5 text-sm text-emerald-800"
-      }
-    >
-      {error || success}
-    </div>
-  );
+  useEffect(() => {
+    if (error) toast.error(error);
+    else if (success) toast.success(success);
+  }, [error, success]);
+  return null;
 }
 
 export function FieldHelp({ children }: { children: React.ReactNode }) {
